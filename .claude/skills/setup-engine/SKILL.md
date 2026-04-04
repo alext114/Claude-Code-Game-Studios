@@ -16,6 +16,10 @@ Three modes:
 - **Engine only**: `/setup-engine unity` — engine provided, version will be looked up
 - **No args**: `/setup-engine` — fully guided mode (engine recommendation + version)
 
+**s&box aliases**: `sbox`, `s&box`, `s-box`, and `sandbox engine` all map to the s&box
+setup flow. Example: `/setup-engine sbox` or `/setup-engine s&box 2024`. When detected,
+skip the guided mode matrix and jump directly to the s&box setup flow in Step 4.
+
 ---
 
 ## 2. Guided Mode (No Arguments)
@@ -41,17 +45,18 @@ If no engine is specified, run an interactive engine selection process:
 
 Use this decision matrix:
 
-| Factor | Godot 4 | Unity | Unreal Engine 5 |
-|--------|---------|-------|-----------------|
-| **Best for** | 2D games, small 3D, solo/small teams | Mobile, mid-scope 3D, cross-platform | AAA 3D, photorealism, large teams |
-| **Language** | GDScript (+ C#, C++ via extensions) | C# | C++ / Blueprint |
-| **Cost** | Free, MIT license | Free under revenue threshold | Free under revenue threshold, 5% royalty |
-| **Learning curve** | Gentle | Moderate | Steep |
-| **2D support** | Excellent (native) | Good (but 3D-first engine) | Possible but not ideal |
-| **3D quality ceiling** | Good (improving rapidly) | Very good | Best-in-class |
-| **Web export** | Yes (native) | Yes (limited) | No |
-| **Console export** | Via third-party | Yes (with license) | Yes |
-| **Open source** | Yes | No | Source available |
+| Factor | Godot 4 | Unity | Unreal Engine 5 | s&box |
+|--------|---------|-------|-----------------|-------|
+| **Best for** | 2D games, small 3D, solo/small teams | Mobile, mid-scope 3D, cross-platform | AAA 3D, photorealism, large teams | Social/multiplayer 3D, Source-feel, experiments |
+| **Language** | GDScript (+ C#, C++ via extensions) | C# | C++ / Blueprint | C# (Component system) |
+| **Cost** | Free, MIT license | Free under revenue threshold | Free under revenue threshold, 5% royalty | Free (early access) |
+| **Learning curve** | Gentle | Moderate | Steep | Moderate (C# + Source 2 conventions) |
+| **2D support** | Excellent (native) | Good (but 3D-first engine) | Possible but not ideal | None (3D only) |
+| **3D quality ceiling** | Good (improving rapidly) | Very good | Best-in-class | Good (Source 2) |
+| **Web export** | Yes (native) | Yes (limited) | No | No |
+| **Console export** | Via third-party | Yes (with license) | Yes | No (PC only) |
+| **Open source** | Yes | No | Source available | Partially (via Facepunch) |
+| **Multiplayer** | Via Multiplayer API | Via Netcode/Mirror/etc. | Via Unreal Networking | Built-in, first-class |
 
 Present the top 1-2 recommendations with reasoning tied to the user's answers.
 Let the user choose — never force a recommendation.
@@ -98,6 +103,76 @@ Read `CLAUDE.md` and update the Technology Stack section. Replace the
 - **Asset Pipeline**: Unreal Content Pipeline
 ```
 
+**For s&box:**
+```markdown
+- **Engine**: s&box [version]
+- **Language**: C# (Component system)
+- **Build System**: s&box built-in (`.sbproj`)
+- **Asset Pipeline**: s&box scene/prefab JSON + model compiler
+```
+
+### s&box Project Structure
+
+When the engine is s&box, also scaffold the project structure after updating CLAUDE.md.
+Ask: "May I create `.sbproj` and the `code/` + `assets/` directory structure?"
+
+**Create `.sbproj`** at the project root:
+```json
+{
+  "Title": "[GameName]",
+  "Type": "game",
+  "Steamworks": false,
+  "Resources": {
+    "code/**/*.cs": "code",
+    "assets/**": "assets"
+  },
+  "StartupScene": "assets/scenes/main.scene"
+}
+```
+
+**Create directory structure** (these directories, not placeholder files):
+```
+code/
+├── Components/
+├── Systems/
+└── UI/
+assets/
+├── scenes/
+├── prefabs/
+├── models/
+└── materials/
+```
+
+> **Critical**: s&box uses `code/` instead of `src/`. Never create a `src/` directory.
+> All game code lives under `code/`. This overrides the default directory-structure.md.
+
+**Create starter component** at `code/Components/PlayerController.cs`:
+```csharp
+using Sandbox;
+
+/// <summary>
+/// Handles player movement and input.
+/// Tune values via [Property] attributes in the editor.
+/// </summary>
+public sealed class PlayerController : Component
+{
+    [Property] public float MoveSpeed { get; set; } = 200f;
+    [Property] public float JumpForce { get; set; } = 300f;
+
+    protected override void OnUpdate()
+    {
+        if ( IsProxy ) return;
+        // Owner-only input handling goes here
+    }
+
+    protected override void OnFixedUpdate()
+    {
+        if ( IsProxy ) return;
+        // Physics/movement goes here
+    }
+}
+```
+
 ---
 
 ## 5. Populate Technical Preferences
@@ -133,6 +208,15 @@ engine-appropriate defaults. Read the existing template first, then fill in:
 - Booleans: `b` prefix (e.g., `bIsAlive`)
 - Files: Match class without prefix (e.g., `PlayerController.h`)
 
+**For s&box (C#):**
+- Classes/Components: PascalCase (e.g., `PlayerController`)
+- Public properties: PascalCase with `[Property]` attribute (e.g., `MoveSpeed`)
+- Private fields: _camelCase (e.g., `_velocity`)
+- Methods: PascalCase (e.g., `OnUpdate()`, `TakeDamage()`)
+- Files: PascalCase matching class (e.g., `PlayerController.cs`)
+- Scenes/prefabs: kebab-case filenames (e.g., `main-scene.scene`, `player.prefab`)
+- Constants: PascalCase or UPPER_SNAKE_CASE
+
 ### Remaining Sections
 - Performance Budgets: Leave as `[TO BE CONFIGURED]` with a suggestion:
   > "Typical targets: 60fps / 16.6ms frame budget. Want to set these now?"
@@ -157,6 +241,8 @@ Check whether the engine version is likely beyond the LLM's training data.
 - Godot: training data likely covers up to ~4.3
 - Unity: training data likely covers up to ~2023.x / early 6000.x
 - Unreal: training data likely covers up to ~5.3 / early 5.4
+- s&box: training data covers the early Component API (~late 2023); current API has
+  diverged significantly — always treat as `HIGH RISK` regardless of version
 
 Compare the user's chosen version against these baselines:
 
@@ -257,6 +343,21 @@ The section should instruct the agent to:
 3. Check breaking changes for relevant version transitions
 4. Use WebSearch to verify uncertain APIs
 
+### s&box Agent Routing
+
+For s&box projects, assign the following specialist agents:
+
+| Role | Agent | Responsibility |
+|------|-------|----------------|
+| Lead | `sbox-specialist` | All s&box patterns, project structure, Component architecture |
+| Gameplay | `sbox-gameplay-programmer` | Component mechanics, OnUpdate/OnFixedUpdate lifecycle |
+| Networking | `sbox-network-programmer` | Built-in multiplayer, `[Sync]`, `[Broadcast]`, `IsProxy` |
+| UI | `sbox-ui-programmer` | Razor panels (`.razor`), CSS (`.scss`), `Panel`/`RootPanel` |
+| Physics | `sbox-physics-programmer` | `CharacterController`, `Scene.Trace`, physics layers |
+
+All s&box agents read `docs/engine-reference/sbox/VERSION.md` and use WebSearch to
+verify any API they cannot confirm from training data.
+
 ---
 
 ## 10. Refresh Subcommand
@@ -277,25 +378,45 @@ If invoked as `/setup-engine refresh`:
 
 ## 11. Output Summary
 
-After setup is complete, output:
+After setup is complete, output the engine-appropriate summary:
 
+**For Godot / Unity / Unreal:**
 ```
 Engine Setup Complete
 =====================
 Engine:          [name] [version]
 Knowledge Risk:  [LOW/MEDIUM/HIGH]
 Reference Docs:  [created/skipped]
-CLAUDE.md:       [updated]
+CLAUDE.md:       updated
 Tech Prefs:      [created/updated]
 Agent Config:    [verified]
 
 Next Steps:
 1. Review docs/engine-reference/<engine>/VERSION.md
-2. [If from /brainstorm] Run /map-systems to decompose your concept into individual systems
-3. [If from /brainstorm] Run /design-system to author per-system GDDs (guided, section-by-section)
+2. [If from /brainstorm] Run /map-systems to decompose your concept into systems
+3. [If from /brainstorm] Run /design-system to author per-system GDDs
 4. [If from /brainstorm] Run /prototype [core-mechanic] to test the core loop
 5. [If fresh start] Run /brainstorm to discover your game concept
 6. Create your first milestone: /sprint-plan new
+```
+
+**For s&box:**
+```
+Engine Setup Complete
+=====================
+Engine:          s&box [version]
+Knowledge Risk:  HIGH (API evolved significantly post-cutoff — always WebSearch)
+Project Files:   .sbproj + code/ + assets/ scaffolded
+CLAUDE.md:       updated
+Tech Prefs:      created
+Agent Config:    sbox-specialist assigned
+
+Next Steps:
+1. /sbox-create-player-controller — scaffold your player component
+2. /sbox-setup-multiplayer       — configure networking conventions
+3. /sbox-add-ui-panel            — add your first Razor UI panel
+4. /map-systems                  — decompose your concept into systems
+5. /sprint-plan new              — plan your first sprint
 ```
 
 ---

@@ -60,6 +60,7 @@ domain lead) should delegate to specialists.
 | `unreal-specialist` | Unreal Engine 5 | Sonnet | Blueprint vs C++, GAS overview, UE subsystems, Unreal optimization |
 | `unity-specialist` | Unity | Sonnet | MonoBehaviour vs DOTS, Addressables, URP/HDRP, Unity optimization |
 | `godot-specialist` | Godot 4 | Sonnet | GDScript patterns, node/scene architecture, signals, Godot optimization |
+| `sbox-specialist` | s&box | Sonnet | Component architecture, multiplayer, project structure, s&box API |
 
 ### Unreal Engine Sub-Specialists
 
@@ -86,3 +87,12 @@ domain lead) should delegate to specialists.
 | `godot-gdscript-specialist` | GDScript | Sonnet | Static typing, design patterns, signals, coroutines, GDScript performance |
 | `godot-shader-specialist` | Shaders/Rendering | Sonnet | Godot shading language, visual shaders, particles, post-processing |
 | `godot-gdextension-specialist` | GDExtension | Sonnet | C++/Rust bindings, native performance, custom nodes, build systems |
+
+### s&box Sub-Specialists
+
+| Agent | Domain | Model | When to Use |
+| ---- | ---- | ---- | ---- |
+| `sbox-gameplay-programmer` | Gameplay Components | Sonnet | Implementing mechanics as Components, OnUpdate/OnFixedUpdate logic, game systems |
+| `sbox-network-programmer` | Built-in Multiplayer | Sonnet | `[Sync]`, `[Broadcast]`, `[Authority]` attributes, `IsProxy` guards, Rpc methods |
+| `sbox-ui-programmer` | Razor UI | Sonnet | `.razor` panels, `.scss` styling, `Panel`/`RootPanel`, data binding, UI events |
+| `sbox-physics-programmer` | Physics & Movement | Sonnet | `CharacterController`, `Rigidbody`, `Scene.Trace` queries, physics layers |

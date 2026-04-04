@@ -68,7 +68,7 @@ if [ -n "$DATA_FILES" ]; then
     done <<< "$DATA_FILES"
 fi
 
-# Check for hardcoded gameplay values in gameplay code
+# Check for hardcoded gameplay values in gameplay code (src/ and s&box code/)
 # Uses grep -E (POSIX extended) instead of grep -P (Perl) for cross-platform compatibility
 CODE_FILES=$(echo "$STAGED" | grep -E '^src/gameplay/')
 if [ -n "$CODE_FILES" ]; then
@@ -81,6 +81,18 @@ if [ -n "$CODE_FILES" ]; then
     done <<< "$CODE_FILES"
 fi
 
+# Same check for s&box code/ directory
+SBOX_CODE_FILES=$(echo "$STAGED" | grep -E '^code/(Components|Systems)/')
+if [ -n "$SBOX_CODE_FILES" ]; then
+    while IFS= read -r file; do
+        if [ -f "$file" ]; then
+            if grep -nE '(damage|health|speed|rate|chance|cost|duration)[[:space:]]*[:=][[:space:]]*[0-9]+' "$file" 2>/dev/null | grep -vE '\[Property\]|//'; then
+                WARNINGS="$WARNINGS\nSBOX: $file may contain hardcoded gameplay values. Use [Property] attributes."
+            fi
+        fi
+    done <<< "$SBOX_CODE_FILES"
+fi
+
 # Check for TODO/FIXME without assignee -- uses grep -E instead of grep -P
 SRC_FILES=$(echo "$STAGED" | grep -E '^src/')
 if [ -n "$SRC_FILES" ]; then
@@ -91,6 +103,18 @@ if [ -n "$SRC_FILES" ]; then
             fi
         fi
     done <<< "$SRC_FILES"
+fi
+
+# Same TODO/FIXME check for s&box code/ directory
+SBOX_ALL_CODE=$(echo "$STAGED" | grep -E '^code/')
+if [ -n "$SBOX_ALL_CODE" ]; then
+    while IFS= read -r file; do
+        if [ -f "$file" ]; then
+            if grep -nE '(TODO|FIXME|HACK)[^(]' "$file" 2>/dev/null; then
+                WARNINGS="$WARNINGS\nSTYLE: $file has TODO/FIXME without owner tag. Use TODO(name) format."
+            fi
+        fi
+    done <<< "$SBOX_ALL_CODE"
 fi
 
 # Print warnings (non-blocking) and allow commit
