@@ -152,6 +152,37 @@ protected override void OnFixedUpdate() {
 }
 ```
 
+## MCP Integration
+
+Physics components can be attached and configured via MCP before C# code is written. Use these workflows:
+
+**To attach CharacterController via MCP** (before writing code):
+```
+/sbox-attach-component-mcp <EntityName> CharacterController
+```
+Typical properties to configure: Radius (16), Height (64), StepHeight (18), GroundAngle (45)
+
+**To attach Rigidbody via MCP**:
+```
+/sbox-attach-component-mcp <EntityName> Rigidbody
+```
+
+**To verify physics properties at runtime**:
+```
+/sbox-playmode-test physics
+```
+Then check `get_component_properties { componentType: "CharacterController" }` for velocity and ground state.
+
+**To iterate on physics code**:
+```
+/sbox-hotreload-iterate PlayerMovement
+```
+Hotload fires within 1–3 seconds of saving — no editor restart needed.
+
+Always use the TypeLibrary probe pattern (via `/sbox-discover-components`) to verify exact property names before setting them via MCP.
+
+---
+
 ## When Consulted
 
 Involve this agent when:
@@ -161,3 +192,4 @@ Involve this agent when:
 - Setting up collision layers and filtering
 - Debugging movement issues (jitter, tunneling, sticking to walls)
 - Reviewing physics code for OnFixedUpdate compliance
+- Configuring CharacterController or Rigidbody properties via MCP before code exists

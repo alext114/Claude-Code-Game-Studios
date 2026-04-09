@@ -39,3 +39,50 @@
 | `/map-systems` | Decompose game concept into systems, map dependencies, prioritize design order, guide per-system GDDs |
 | `/design-system` | Guided, section-by-section GDD authoring for a single game system with cross-referencing and incremental writing |
 | `/setup-engine` | Configure engine + version, detect knowledge gaps, populate version-aware reference docs |
+
+## s&box MCP Skills
+
+These skills require the s&box MCP server running at `localhost:8098` (s&box editor must be open).
+
+### Scene Intelligence
+| Command | Purpose |
+|---------|---------|
+| `/sbox-scene-context` | Orient to the active scene: counts, hierarchy, component inventory, editor state |
+| `/sbox-inspect-scene <Object>` | Deep read of a specific GameObject: all components, properties, children, transform |
+| `/sbox-discover-components [keyword]` | Browse TypeLibrary for available component types; probe default property values |
+| `/sbox-select-frame <Object>` | Select and frame-camera on a GameObject in the editor viewport |
+
+### Scene Authoring (GameObjects)
+| Command | Purpose |
+|---------|---------|
+| `/sbox-spawn-entity <Name> [at X Y Z]` | Create a named GameObject in the scene with transform and tags |
+| `/sbox-attach-component-mcp <Entity> <Type>` | Attach a built-in Component and configure its properties (no C# needed) |
+| `/sbox-hotreload-iterate <Component>` | Edit a C# Component, wait for hotload, verify the change is live |
+
+### Prefab Management
+| Command | Purpose |
+|---------|---------|
+| `/sbox-generate-prefab <Entity>` | Capture a scene object as a `.prefab` file |
+| `/sbox-prefab-sync [PrefabName]` | Audit and sync prefab instances; apply upstream prefab changes |
+| `/sbox-audit-prefab <Name>` | Deep health check: instance sync, missing components, property validation |
+
+### Level Geometry (CSG)
+| Command | Purpose |
+|---------|---------|
+| `/sbox-build-level [Name]` | Guided full level assembly: floors, walls, ceilings, cover, platforms |
+| `/sbox-sculpt-block <Name> [WxHxD]` | Create a single CSG block with materials and UV configuration |
+| `/sbox-vertex-paint <Block>` | Apply vertex colors and blend weights to CSG geometry |
+| `/sbox-hotswap-asset <Asset>` | Force-reload a material/model, or swap an asset reference on a Component |
+
+### AI Navigation
+| Command | Purpose |
+|---------|---------|
+| `/sbox-setup-navmesh` | Create NavMeshArea walkable zones, blockers, and NavMeshLinks |
+| `/sbox-spawn-nav-agent <Entity>` | Attach NavMeshAgent to an entity and configure movement parameters |
+| `/sbox-build-ai-encounter [Name]` | Full encounter zone: spawn points, nav agents, waypoints, trigger volumes |
+
+### Testing & Validation
+| Command | Purpose |
+|---------|---------|
+| `/sbox-playmode-test [focus]` | Enter play mode, run runtime checks, read editor log, exit play mode |
+| `/sbox-setup-multiplayer` | Audit Components for IsProxy guards, [Sync] coverage, RPC correctness |

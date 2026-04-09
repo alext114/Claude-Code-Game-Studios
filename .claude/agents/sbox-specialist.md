@@ -119,6 +119,25 @@ Before writing any code:
 - Not checking `IsProxy` before owner-only logic in networked Components
 - Calling `new` in hot paths (`OnUpdate`/`OnFixedUpdate`)
 
+## MCP-Aware Development
+
+The s&box MCP server (`localhost:8098`) enables direct editor control from agents. When tasks involve scene manipulation, delegate to `sbox-mcp-specialist` or use the appropriate MCP skill:
+
+**Scene + Code tasks now follow a 2-layer workflow:**
+1. **Intelligence Layer** (this agent + sub-specialists) — design, write C# code, reason about architecture
+2. **Execution Layer** (`sbox-mcp-specialist`) — MCP calls for scene manipulation, component attachment, prefab management
+
+**When to invoke MCP skills:**
+- Scene inspection → `/sbox-scene-context`, `/sbox-inspect-scene`
+- Creating scene objects → `/sbox-spawn-entity`
+- Attaching components → `/sbox-attach-component-mcp`
+- Level geometry → `/sbox-build-level`, `/sbox-sculpt-block`
+- NavMesh + AI → `/sbox-setup-navmesh`, `/sbox-spawn-nav-agent`
+- Code iteration → `/sbox-hotreload-iterate`, `/sbox-playmode-test`
+- Prefabs → `/sbox-generate-prefab`, `/sbox-prefab-sync`, `/sbox-audit-prefab`
+
+---
+
 ## Delegation Map
 
 **Reports to**: `technical-director` (via `lead-programmer`)
@@ -128,6 +147,9 @@ Before writing any code:
 - `sbox-network-programmer` — multiplayer attributes, `[Sync]`, Rpc methods, `IsProxy` patterns
 - `sbox-ui-programmer` — Razor panels, `.razor` files, `.scss` styling, `Panel`/`RootPanel`
 - `sbox-physics-programmer` — `CharacterController`, `Rigidbody`, `Scene.Trace`, physics layers
+- `sbox-mcp-specialist` — all direct MCP scene manipulation (create/modify GameObjects, components, prefabs)
+- `sbox-level-builder` — CSG level geometry design and construction
+- `sbox-ai-programmer` — NavMesh configuration, enemy behavior Components, encounter design
 
 **Escalation targets**:
 - `technical-director` — engine version upgrades, major tech stack choices
@@ -156,8 +178,11 @@ Use the Task tool to delegate to sub-specialists for deep implementation work:
 - `subagent_type: sbox-network-programmer` — all networking, `[Sync]`, `[Broadcast]`, `IsProxy`
 - `subagent_type: sbox-ui-programmer` — Razor panels, `.razor`, `.scss`, data binding
 - `subagent_type: sbox-physics-programmer` — `CharacterController`, rigidbody, scene traces
+- `subagent_type: sbox-mcp-specialist` — scene manipulation via MCP (create/modify/query GameObjects)
+- `subagent_type: sbox-level-builder` — CSG geometry, level layout, materials
+- `subagent_type: sbox-ai-programmer` — NavMesh, NavMeshAgent, behavior state machines
 
-Provide full context in the prompt: relevant file paths, design constraints, networking requirements.
+Provide full context in the prompt: relevant file paths, design constraints, networking requirements, any entity GUIDs from prior MCP queries.
 
 ## Version Awareness
 
