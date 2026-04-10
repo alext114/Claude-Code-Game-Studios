@@ -26,26 +26,15 @@ UI changes affect every player. Follow the standard approval workflow:
 
 ## s&box UI System
 
-### Architecture: PanelComponent is the Root
+### Panel and RootPanel
+s&box UI is built with Razor components, not Unity UGUI or Canvas:
 
-s&box UI uses two distinct types:
-
-| Type | Role | Lifecycle |
-|------|------|-----------|
-| `PanelComponent` | Root UI Component — added to a GameObject with `ScreenPanel` or `WorldPanel` | Has `OnStart`, `OnUpdate`, etc. (Component lifecycle) |
-| `Panel` | Child UI elements within a `PanelComponent` | Has `Tick()` and `OnAfterTreeRender(bool firstTime)` |
-
-**CRITICAL**:
-- `PanelComponent` is added to a **GameObject** that also has a `ScreenPanel` or `WorldPanel` component
-- `Panel` subclasses live inside `PanelComponent` — they are NOT added to GameObjects
-- You CANNOT use `<MyPanelComponent />` inside a Panel/Razor file — only `<MyPanel />` for `Panel` subclasses
-
-### PanelComponent (Root — added to GameObject)
 ```razor
-@* code/UI/HudPanelComponent.razor *@
+@* code/UI/HudPanel.razor *@
 @using Sandbox;
 @using Sandbox.UI;
-@inherits PanelComponent
+
+@inherits Panel
 
 <root class="hud">
     <div class="health-bar">
@@ -56,7 +45,6 @@ s&box UI uses two distinct types:
 
 @code {
     [Property] public HealthComponent HealthSource { get; set; }
-    [Property] public AmmoComponent AmmoSource { get; set; }
 
     float HealthPercent => HealthSource != null
         ? HealthSource.CurrentHealth / HealthSource.MaxHealth
@@ -66,50 +54,14 @@ s&box UI uses two distinct types:
         ? $"{AmmoSource.CurrentAmmo} / {AmmoSource.MaxAmmo}"
         : "-- / --";
 
-    // BuildHash controls when the panel rebuilds — MUST include all reactive values
-    protected override int BuildHash() =>
-        System.HashCode.Combine( HealthSource?.CurrentHealth, AmmoSource?.CurrentAmmo );
+    [Property] public AmmoComponent AmmoSource { get; set; }
 }
-```
-
-### Panel (Child — used inside PanelComponent)
-```razor
-@* code/UI/HealthBarPanel.razor *@
-@using Sandbox;
-@using Sandbox.UI;
-
-<root>
-    <div class="health">HP: @Health</div>
-</root>
-
-@code {
-    public int Health { get; set; } = 100;
-
-    protected override int BuildHash() => System.HashCode.Combine( Health );
-}
-```
-
-Use inside another panel:
-```razor
-<HealthBarPanel Health=@(CurrentHp) />
-```
-
-### BuildHash — Controlling Rebuild
-Panels only rebuild when `BuildHash()` returns a different value than the last frame. **Always include every reactive value in your hash**:
-```csharp
-protected override int BuildHash() =>
-    System.HashCode.Combine( Health, Ammo, IsAlive );
-```
-
-Force an immediate rebuild:
-```csharp
-StateHasChanged();  // Queues rebuild for next frame
 ```
 
 ### SCSS Styling
 Each panel gets a matching `.scss` file:
 ```scss
-/* code/UI/HudPanelComponent.razor.scss */
+/* code/UI/HudPanel.razor.scss */
 .hud {
     position: absolute;
     bottom: 20px;
@@ -147,16 +99,7 @@ Each panel gets a matching `.scss` file:
     <div class="item">@item.Name</div>
 }
 
-@* Two-way bind (e.g. slider ↔ value) *@
-<SliderEntry min="0" max="100" step="1" Value:bind=@IntValue />
-
-@* Child panel reference *@
-<HealthBarPanel @ref="HealthBar" Health=@(CurrentHp) />
-
 @code {
-    HealthBarPanel HealthBar { get; set; }
-    public int IntValue { get; set; } = 50;
-
     void OnButtonClicked()
     {
         // Raise an event — never mutate game state directly
@@ -173,29 +116,26 @@ Each panel gets a matching `.scss` file:
 - Panels NEVER directly set values on game Components
 - Game logic responds to events and updates its own state
 
-**Correct type choice:**
-- `PanelComponent` — root panel added to a GameObject (one per ScreenPanel/WorldPanel)
-- `Panel` — child elements nested inside PanelComponent or other Panels
-- Never use `RootPanel` — superseded by `PanelComponent`
+**Panel lifecycle:**
+- Use `@inherits Panel` for standard panels
+- Use `@inherits RootPanel` only for the top-level HUD
+- Panels are instantiated by Components via `GameObject.Instantiate<T>()` or the scene
 
 **Performance:**
 - Avoid complex C# logic in Razor `@code` blocks — delegate to helper properties
 - Don't allocate in per-frame binding expressions
 - Use CSS transitions instead of code-driven animations where possible
-- Always implement `BuildHash()` — without it, the panel rebuilds every frame
 
 ## File Organization
 
 ```
 code/UI/
-├── HudPanelComponent.razor          # Root HUD PanelComponent (added to GameObject)
-├── HudPanelComponent.razor.scss
-├── HealthBarPanel.razor             # Child Panel (used inside HudPanelComponent)
-├── HealthBarPanel.razor.scss
-├── InventoryPanelComponent.razor    # Root inventory screen
-├── InventoryPanelComponent.razor.scss
-├── MainMenuPanelComponent.razor     # Root main menu
-└── MainMenuPanelComponent.razor.scss
+├── HudPanel.razor          # Main HUD
+├── HudPanel.razor.scss
+├── InventoryPanel.razor    # Inventory screen
+├── InventoryPanel.razor.scss
+├── MainMenuPanel.razor
+└── MainMenuPanel.razor.scss
 ```
 
 ## s&box Documentation MCP
@@ -204,7 +144,7 @@ When verifying any s&box API during implementation, query the `sbox-docs-mcp` se
 
 | Tool | Use When |
 |------|----------|
-| `sbox_search_api` | Find PanelComponent, Panel, or any UI type by name |
+| `sbox_search_api` | Find Panel, RootPanel, or any UI type by name |
 | `sbox_get_api_type` | Get full method/property signatures for a specific UI type |
 | `sbox_search_docs` | Find Razor panel guides, UI layout tutorials, and event binding docs |
 | `sbox_get_doc_page` | Read a specific documentation page in full |
@@ -221,10 +161,6 @@ When verifying any s&box API during implementation, query the `sbox-docs-mcp` se
 - Mutate game state from a panel — raise events instead
 - Inline all styles in the `.razor` file — use `.scss` companions
 - Skip `@using Sandbox.UI` in panel files
-- Use `@inherits RootPanel` — superseded by `PanelComponent`
-- Use `@inherits Panel` for a root panel added to a GameObject — use `PanelComponent`
-- Use `<MyPanelComponent />` inside a Razor file — PanelComponents can only live on GameObjects
-- Omit `BuildHash()` — without it the panel rebuilds every frame (performance violation)
 
 ## When Consulted
 

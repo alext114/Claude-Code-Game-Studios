@@ -62,8 +62,8 @@ You translate intent into MCP tool calls. Other agents design; you execute. When
 - `break_from_prefab` — make instance independent
 
 **NavMesh**
-- `create_nav_mesh_area` — area volume that modifies NavMesh generation/traversal cost (primary NavMesh is built from PhysicsWorld)
-- `create_nav_mesh_link` — cross-region connection (stairs, drops, jumps)
+- `create_nav_mesh_area` — walkable zone or blocker
+- `create_nav_mesh_link` — cross-region connection
 - `create_nav_mesh_agent` — AI navigation component
 
 **CSG Mesh**

@@ -26,78 +26,19 @@ You are the AI Programmer specialist for s&box. You own all AI navigation and be
 
 ### Architecture
 
-s&box uses **Recast Navigation** (the same industry-standard library used by Unreal, Unity, and Godot). The NavMesh is **built from the scene's PhysicsWorld** — it traces over all physics geometry to compute walkable surfaces.
+NavMesh in s&box is **automatically computed** from `NavMeshArea` volumes — no manual bake required. The system:
+1. Finds all `NavMeshArea` volumes with `isBlocker: false`
+2. Subtracts all `NavMeshArea` volumes with `isBlocker: true`
+3. Builds walkable mesh from the resulting geometry
+4. Updates automatically when volumes change in the editor
 
-**To enable NavMesh:**
-1. Click "Enable NavMesh" in the scene editor header
-2. The NavMesh rebuilds live as you edit geometry
-3. Toggle visualization with the button next to it
-
-NavMesh is **not** manually defined with area volumes — it reads all physics colliders automatically.
-
-### NavMeshArea — Modifying Nav Behavior (Optional)
-`NavMeshArea` components **modify** NavMesh generation and agent behavior within a volume. They do NOT define the primary walkable surface:
-- Assign `NavMeshAreaDefinition` resources to set traversal cost (e.g. "water", "danger zone")
-- Use for per-area agent behavior tuning and Costs & Filters (see `/sbox-setup-navmesh`)
-- Maximum 24 unique `NavMeshAreaDefinition` resources (can be applied to unlimited Area components)
-
-### Scene.NavMesh Code API
-```csharp
-// Get a random navigable position anywhere on the mesh
-var pos = Scene.NavMesh.GetRandomPoint();
-
-// Get a random position within radius of a test position
-var pos = Scene.NavMesh.GetRandomPoint( testPosition, radius );
-
-// Snap a world position to the nearest point on the NavMesh
-var pos = Scene.NavMesh.GetClosestPoint( testPosition );
-
-// Get the nearest edge of the NavMesh from a position
-var edge = Scene.NavMesh.GetClosestEdge( testPosition );
-
-// Calculate a path between two points
-var path = Scene.NavMesh.CalculatePath( new CalculatePathRequest()
-{
-    Agent  = _agent,           // Optional: use agent params for clearance/cost
-    Start  = WorldPosition,
-    Target = targetPosition,
-} );
-
-if ( path.IsValid() )
-{
-    // path.Status is Complete or Partial
-}
-
-// Force NavMesh rebuild (e.g. after runtime geometry change)
-Scene.NavMesh.SetDirty();
-```
-
-### NavMeshAgent Code API
-```csharp
-NavMeshAgent _agent;
-
-protected override void OnStart()
-{
-    _agent = Components.Get<NavMeshAgent>();
-}
-
-// Set movement target — agent navigates automatically with crowd avoidance
-_agent.MoveTo( targetPosition );
-
-// Stop navigating
-_agent.Stop();
-
-// Read current velocity (use for animation)
-var velocity = _agent.Velocity;
-```
-
-### MCP NavMesh Tools (via `/sbox-setup-navmesh`)
+### MCP NavMesh Tools
 
 ```
 create_nav_mesh_area {
   x, y, z,           // center position
   name: "NavArea_...",
-  isBlocker: false    // used for optional area type/cost definition
+  isBlocker: false    // false = walkable, true = obstacle
 }
 
 create_nav_mesh_link {
@@ -120,11 +61,10 @@ create_nav_mesh_agent {
 
 ### Critical Constraints
 
-- NavMesh is computed from physics geometry — geometry must have colliders to appear in the NavMesh
 - `connectionRadius` on NavMeshLink must be ≥ agent's `Radius` or the agent cannot reach the link
-- NavMesh lacks exact height info — use `PhysicsWorld` traces when you need precise ground placement
+- NavMeshArea must overlap with actual walkable geometry — a floating area over a pit produces no valid nav data
+- Every floor level in a multi-floor map needs its own NavMeshArea
 - NavMeshLinks connect disconnected regions (stairs, drops, jumps)
-- Agents have built-in crowd control — they avoid each other automatically
 
 ---
 
@@ -313,9 +253,7 @@ When verifying any s&box API during implementation, query the `sbox-docs-mcp` se
 
 - Use Unity AI APIs (UnityEngine.AI.NavMeshAgent, etc.) — this is s&box
 - Call `NavMeshAgent.SetDestination()` — s&box uses `_agent.MoveTo()`
-- Use `Physics.Raycast` for sight checks — use `Scene.Trace.Ray().Run()`; result uses `tr.EndPosition` and `tr.GameObject`
-- Run AI logic in `OnFixedUpdate` — use `OnUpdate` (AI decision-making is not physics)
+- Use `Physics.Raycast` for sight checks — use `Scene.Trace.Ray().Run()`
+- Run AI logic in `OnFixedUpdate` — use `OnUpdate` (AI is not physics)
 - Omit `if ( IsProxy ) return` from behavior update methods in multiplayer games
 - Create NavMeshLinks with `connectionRadius` smaller than agent `Radius`
-- Assume NavMesh is defined by NavMeshArea volumes — NavMesh is built from the PhysicsWorld; NavMeshArea only modifies traversal cost/behavior
-- Forget to click "Enable NavMesh" in the scene header before using any NavMesh APIs

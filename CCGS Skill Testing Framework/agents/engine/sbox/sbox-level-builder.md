@@ -35,8 +35,8 @@ These are hard requirements, not suggestions:
 | Corridor height | 144 units | 256 units | 2× player height minimum |
 | Doorway width | 96 units | 128 units | Must fit player + slight clearance |
 | Ceiling height | 192 units | 256–512 units | Higher = more open feel |
-| Platform step | ≤ 18 units | — | PlayerController StepHeight default |
-| Ramp slope | ≤ 45° | 30° ideal | Steeper fails PlayerController |
+| Platform step | ≤ 18 units | — | CharacterController StepHeight default |
+| Ramp slope | ≤ 45° | 30° ideal | Steeper fails CharacterController |
 | Cover height | 64–96 units | 80 units | Crouch cover = 64, standing = 96 |
 | Room minimum | 512×512 | 1024×1024 | For a 4-player arena |
 

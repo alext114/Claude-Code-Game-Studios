@@ -61,7 +61,7 @@ Before writing any code:
 - Enforce Component-based architecture — every game entity is a Component, never a POCO class
 - Ensure `code/` is used for all source; never `src/`
 - Ensure `.sbproj` is present and valid at the project root
-- Guide multiplayer design: `[Sync]`, `[Rpc.Broadcast]`, `[Rpc.Host]`, `[Rpc.Owner]`, `IsProxy`
+- Guide multiplayer design: `[Sync]`, `[Broadcast]`, `[Authority]`, `IsProxy`
 - Review all s&box-specific code for engine best practices
 - Verify `[Property]` attributes are used for all designer-tunable values
 - Advise on project structure, scene organization, and prefab design
@@ -77,33 +77,18 @@ Before writing any code:
 - Components communicate via direct references, events, or scene queries — not global statics
 
 ### Lifecycle
-Full override order (from docs):
-- `OnLoad()` — async, runs during loading screen; override for procedural generation or asset loading
-- `OnValidate()` — called on property change in editor and after deserialization; enforce property limits here
-- `OnAwake()` — called once when component is created if parent GameObject is enabled
-- `OnStart()` — called when component is enabled for the first time; cache component references here
-- `OnEnabled()` — called every time the component is enabled
-- `OnUpdate()` — per-frame: input reading, animation, non-physics transforms
-- `OnPreRender()` — per-frame, after animation bones calculated; NOT called on dedicated servers
-- `OnFixedUpdate()` — fixed timestep: physics forces, character movement
-- `OnDisabled()` — called every time the component is disabled
+- `OnUpdate()` — per-frame logic: input reading, animation, non-physics transforms
+- `OnFixedUpdate()` — physics and movement: rigidbody forces, character controller moves
+- `OnStart()` — initialization after all Components have been created
 - `OnDestroy()` — cleanup, event unsubscription
-
-**Rules:**
-- **Never** do physics in `OnUpdate()` — always `OnFixedUpdate()`
-- **Never** read `Input.*` in `OnFixedUpdate()` — always `OnUpdate()`
-- `OnPreRender()` is the correct place for bone-dependent transforms (IK, weapon attachment)
+- **Never** do physics in `OnUpdate()` — always use `OnFixedUpdate()`
+- **Never** do input polling in `OnFixedUpdate()` — always use `OnUpdate()`
 
 ### Multiplayer Conventions
 - Always check `if ( IsProxy ) return` at the top of owner-only methods
 - Use `[Sync]` on properties that need automatic replication to all clients
-- Use `[Sync( SyncFlags.Interpolate )]` on smoothly-changing values (position, rotation)
-- Use `[Change( "MethodName" )]` alongside `[Sync]` to react to value changes on all clients
-- Use `[Rpc.Broadcast]` for events that should run on ALL clients (visual effects, sounds)
-- Use `[Rpc.Host]` for actions that should run ONLY on the host/server
-- Use `[Rpc.Owner]` for actions that should run ONLY on the owning client
-- Use `NetList<T>` / `NetDictionary<K,V>` for networked collections (not regular List/Dictionary)
-- Call `go.NetworkSpawn()` after cloning a prefab to register it with the network
+- Use `[Broadcast]` Rpc for events that should run on all clients (e.g., visual effects)
+- Use `[Authority]` Rpc for actions that should run only on the server/host
 - Never implement manual state synchronization — use built-in `[Sync]` attributes
 - Do not reference external networking libraries (Mirror, Netcode for GameObjects, Photon)
 
@@ -125,40 +110,14 @@ Full override order (from docs):
 - Object pooling for frequently spawned entities (projectiles, effects)
 - Disable Components that don't need to tick by setting `Enabled = false`
 
-### Component Query API (Correct)
-```csharp
-// Get single component on same GameObject
-var rb = GetComponent<Rigidbody>();
-// Get or create
-var rb = GetOrAddComponent<Rigidbody>();
-// From children
-var model = GetComponentInChildren<ModelRenderer>();
-// From ancestors
-var root = Components.GetComponentInParent<SomeType>();
-// Add in code
-var light = GameObject.AddComponent<PointLight>();
-// Destroy a component
-someComponent.Destroy();
-// Destroy this GameObject from within a Component
-DestroyGameObject();
-// Validity after potential destroy
-if ( someComponent.IsValid() ) { }
-// All active scene instances
-foreach ( var pc in Scene.GetAll<PlayerController>() ) { }
-```
-
 ### Common Pitfalls to Flag
 - `using UnityEngine;` — BLOCKED: this is not Unity
 - `MonoBehaviour` — BLOCKED: use `Component` instead
-- `RootPanel` — BLOCKED: use `PanelComponent` for root UI
 - Code in `src/` — BLOCKED: all code must be in `code/`
-- `Physics.Raycast()` — use `Scene.Trace.Ray().Run()` instead; result is `tr.EndPosition` / `tr.GameObject`
-- `tr.HitPosition` or `tr.Component` — use `tr.EndPosition` and `tr.GameObject`
+- `Physics.Raycast()` — use `Scene.Trace.Ray().Run()` instead
 - Raw public fields on Components — use `[Property]` instead
 - Not checking `IsProxy` before owner-only logic in networked Components
 - Calling `new` in hot paths (`OnUpdate`/`OnFixedUpdate`)
-- Omitting `BuildHash()` on Razor panels — causes rebuild every frame
-- Using `[Broadcast]` or `[Authority]` — correct attributes are `[Rpc.Broadcast]`, `[Rpc.Host]`, `[Rpc.Owner]`
 
 ## MCP-Aware Development
 
@@ -186,8 +145,8 @@ The s&box MCP server (`localhost:8098`) enables direct editor control from agent
 **Delegates to**:
 - `sbox-gameplay-programmer` — Component mechanics, game systems, OnUpdate/OnFixedUpdate logic
 - `sbox-network-programmer` — multiplayer attributes, `[Sync]`, Rpc methods, `IsProxy` patterns
-- `sbox-ui-programmer` — Razor panels, `.razor` files, `.scss` styling, `PanelComponent`/`Panel`
-- `sbox-physics-programmer` — `PlayerController`, `Rigidbody`, `Scene.Trace`, physics layers
+- `sbox-ui-programmer` — Razor panels, `.razor` files, `.scss` styling, `Panel`/`RootPanel`
+- `sbox-physics-programmer` — `CharacterController`, `Rigidbody`, `Scene.Trace`, physics layers
 - `sbox-mcp-specialist` — all direct MCP scene manipulation (create/modify GameObjects, components, prefabs)
 - `sbox-level-builder` — CSG level geometry design and construction
 - `sbox-ai-programmer` — NavMesh configuration, enemy behavior Components, encounter design
@@ -216,9 +175,9 @@ The s&box MCP server (`localhost:8098`) enables direct editor control from agent
 Use the Task tool to delegate to sub-specialists for deep implementation work:
 
 - `subagent_type: sbox-gameplay-programmer` — Component mechanics, game systems, lifecycle methods
-- `subagent_type: sbox-network-programmer` — all networking, `[Sync]`, `[Rpc.Broadcast]`, `[Rpc.Host]`, `[Rpc.Owner]`, `IsProxy`
+- `subagent_type: sbox-network-programmer` — all networking, `[Sync]`, `[Broadcast]`, `IsProxy`
 - `subagent_type: sbox-ui-programmer` — Razor panels, `.razor`, `.scss`, data binding
-- `subagent_type: sbox-physics-programmer` — `PlayerController`, rigidbody, scene traces
+- `subagent_type: sbox-physics-programmer` — `CharacterController`, rigidbody, scene traces
 - `subagent_type: sbox-mcp-specialist` — scene manipulation via MCP (create/modify/query GameObjects)
 - `subagent_type: sbox-level-builder` — CSG geometry, level layout, materials
 - `subagent_type: sbox-ai-programmer` — NavMesh, NavMeshAgent, behavior state machines

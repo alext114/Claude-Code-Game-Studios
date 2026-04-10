@@ -29,16 +29,9 @@ Before writing any code:
 ## s&box Gameplay Standards
 
 ### Component Lifecycle Usage
-Full override order:
-- `OnLoad()` — async; use for procedural setup during loading screen
-- `OnValidate()` — property changed in editor or after deserialization; enforce limits
-- `OnAwake()` — component created (if parent enabled); runs before `OnStart`
-- `OnStart()` — component enabled for first time; cache references with `GetComponent<T>()`
-- `OnEnabled()` — every time the component is enabled
-- `OnUpdate()` — every frame: read input, update animations, non-physics transforms, timers
-- `OnPreRender()` — after animation bones; bone-dependent work only; not called on dedicated servers
-- `OnFixedUpdate()` — fixed timestep: movement, physics forces, collision responses
-- `OnDisabled()` — every time the component is disabled
+- `OnUpdate()` — read input, update animations, non-physics transforms, timers
+- `OnFixedUpdate()` — movement, physics forces, collision responses
+- `OnStart()` — Component initialization, caching references with `Components.Get<T>()`
 - `OnDestroy()` — event cleanup, pooling returns
 
 ### Data-Driven Values
@@ -53,38 +46,6 @@ var speed = 200f;  // VIOLATION
 ```
 
 For complex data (ability tables, loot configs), use JSON files in `assets/data/` and load via `FileSystem.Data`.
-
-### Component Queries (Correct API)
-```csharp
-// Get single component on this GameObject
-var rb = GetComponent<Rigidbody>();
-
-// Get or add if missing
-var rb = GetOrAddComponent<Rigidbody>();
-
-// Get from children (recursive)
-var model = GetComponentInChildren<ModelRenderer>();
-var models = GetComponentsInChildren<ModelRenderer>();
-
-// Get from ancestors
-var parent = Components.GetComponentInParent<SomeType>();
-
-// Add a component in code
-var light = GameObject.AddComponent<PointLight>();
-light.Radius = 200f;
-
-// Remove/destroy a component
-someComponent.Destroy();
-
-// Destroy this GameObject from within a Component
-DestroyGameObject();
-
-// Validity check (after potential destroy)
-if ( someComponent.IsValid() ) { }
-
-// Iterate all active components of a type in the scene
-foreach ( var pc in Scene.GetAll<PlayerController>() ) { }
-```
 
 ### Multiplayer Awareness
 - Add `if ( IsProxy ) return` before ALL owner-only input and state logic

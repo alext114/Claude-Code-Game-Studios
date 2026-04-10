@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "sbox-docs": {
+      "command": "node",
+      "args": [
+        "D:\\source\\repos\\sbox-mcp-documentation\\dist\\index.js"
+      ]
+    },
+    "codesight": {
+      "command": "npx",
+      "args": ["codesight", "--mcp"]
+    }
+  }
+}
