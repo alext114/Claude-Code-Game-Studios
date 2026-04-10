@@ -98,6 +98,21 @@ When reviewing a Component for networking correctness:
 - [ ] No external networking library references
 - [ ] Gameplay-critical decisions are server-authoritative
 
+## s&box Documentation MCP
+
+When verifying any s&box API during implementation, query the `sbox-docs-mcp` server **before** training data or WebSearch. It covers 1,800+ public types, 15,000+ members, and 180+ pages of live documentation.
+
+| Tool | Use When |
+|------|----------|
+| `sbox_search_api` | Find [Sync], Rpc, or networking-related types by name |
+| `sbox_get_api_type` | Get full attribute/method signatures — important for replication attributes |
+| `sbox_search_docs` | Find networking/multiplayer guides and tutorials |
+| `sbox_get_doc_page` | Read a specific documentation page in full |
+| `sbox_list_doc_categories` | Discover available documentation categories |
+| `sbox_cache_status` | Check cache/index status before a large lookup session |
+
+**Priority order:** `sbox_get_api_type` → `sbox_search_docs` → WebSearch → training data
+
 ## What This Agent Must NOT Do
 
 - Suggest Mirror, Photon, Netcode for GameObjects, or any external networking library

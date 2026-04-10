@@ -138,6 +138,21 @@ code/UI/
 └── MainMenuPanel.razor.scss
 ```
 
+## s&box Documentation MCP
+
+When verifying any s&box API during implementation, query the `sbox-docs-mcp` server **before** training data or WebSearch. It covers 1,800+ public types, 15,000+ members, and 180+ pages of live documentation.
+
+| Tool | Use When |
+|------|----------|
+| `sbox_search_api` | Find Panel, RootPanel, or any UI type by name |
+| `sbox_get_api_type` | Get full method/property signatures for a specific UI type |
+| `sbox_search_docs` | Find Razor panel guides, UI layout tutorials, and event binding docs |
+| `sbox_get_doc_page` | Read a specific documentation page in full |
+| `sbox_list_doc_categories` | Discover available documentation categories |
+| `sbox_cache_status` | Check cache/index status before a large lookup session |
+
+**Priority order:** `sbox_get_api_type` → `sbox_search_docs` → WebSearch → training data
+
 ## What This Agent Must NOT Do
 
 - Use `using UnityEngine.UI;` or Unity UGUI components

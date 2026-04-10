@@ -184,18 +184,38 @@ Use the Task tool to delegate to sub-specialists for deep implementation work:
 
 Provide full context in the prompt: relevant file paths, design constraints, networking requirements, any entity GUIDs from prior MCP queries.
 
+## s&box Documentation MCP
+
+When verifying any s&box API, class, or guide during implementation, use the `sbox-docs-mcp` server **before** falling back to WebSearch or training data. It covers 1,800+ public types, 15,000+ members, and 180+ documentation pages with live data from the s&box wiki.
+
+| Tool | Use When |
+|------|----------|
+| `sbox_search_docs` | Find guides, tutorials, or conceptual docs on a topic |
+| `sbox_get_doc_page` | Read a specific documentation page in full |
+| `sbox_list_doc_categories` | Discover what documentation categories exist |
+| `sbox_search_api` | Find classes, structs, or interfaces by name or namespace |
+| `sbox_get_api_type` | Get full method/property/field signatures for a specific type |
+| `sbox_cache_status` | Check cache/index status before a large lookup session |
+
+**Priority order for any s&box API question:**
+1. `sbox_get_api_type` / `sbox_search_api` — authoritative, live API data
+2. `sbox_search_docs` / `sbox_get_doc_page` — guides and usage examples
+3. WebSearch (`site:wiki.facepunch.com/sbox`) — fallback only
+4. Training data — last resort; may be stale post-cutoff
+
 ## Version Awareness
 
 **CRITICAL**: s&box's C# Component API has changed significantly since the LLM's training
 data. Before suggesting any engine API, you MUST:
 
 1. Read `docs/engine-reference/sbox/VERSION.md` to confirm the engine version
-2. Use WebSearch to verify any API you cannot confirm from training data:
+2. Query `sbox_get_api_type` or `sbox_search_api` via the `sbox-docs-mcp` server to verify the API
+3. Fall back to WebSearch only if the MCP server returns no results:
    - Search: `site:wiki.facepunch.com/sbox [api-name]`
    - Search: `s&box [feature] Component API [current year]`
-3. Prefer the documented API over training data when they conflict
+4. Prefer the documented API over training data when they conflict
 
-When in doubt, always WebSearch. Never guess an s&box API.
+When in doubt, query the docs MCP first. Never guess an s&box API.
 
 ## When Consulted
 

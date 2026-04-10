@@ -113,6 +113,23 @@ NEVER guess property names. The probe pattern is mandatory.
 
 ---
 
+## s&box Documentation MCP
+
+When you need to verify a component type name, property name, or API shape before issuing MCP calls, use the `sbox-docs-mcp` server. This is especially useful to confirm exact type names before `add_component` or `set_component_property` calls (supplements but does not replace the TypeLibrary probe pattern).
+
+| Tool | Use When |
+|------|----------|
+| `sbox_search_api` | Confirm exact class/struct names before `add_component` or `get_component_types` |
+| `sbox_get_api_type` | Verify property names and types before `set_component_property` |
+| `sbox_search_docs` | Find guides on MCP-related workflows (scene setup, prefab management) |
+| `sbox_get_doc_page` | Read a specific documentation page in full |
+| `sbox_list_doc_categories` | Discover available documentation categories |
+| `sbox_cache_status` | Check cache/index status before a large lookup session |
+
+**Priority order:** TypeLibrary probe pattern → `sbox_get_api_type` → `sbox_search_docs` → WebSearch
+
+---
+
 ## What You CANNOT Do
 
 - Write C# source files (use `sbox-gameplay-programmer` or `sbox-create-component` skill)
