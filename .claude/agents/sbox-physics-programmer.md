@@ -26,48 +26,80 @@ Physics bugs are hard to debug and affect multiplayer correctness. Follow the ap
 
 ## s&box Physics APIs
 
-### CharacterController — Player Movement
-```csharp
-using Sandbox;
+### PlayerController — Player Movement
 
+> **NOTE:** `CharacterController` is the OLD API (pre-26.x). Use `PlayerController` with `WishVelocity`.
+> `CharacterController._controller.Move()` is a breaking change — it no longer exists.
+
+```csharp
 public sealed class PlayerMovement : Component
 {
-    [Property, Range(50f, 600f)] public float MoveSpeed { get; set; } = 250f;
-    [Property, Range(100f, 800f)] public float JumpForce { get; set; } = 350f;
-    [Property, Range(0f, 50f)] public float Gravity { get; set; } = 25f;
+    [Property, Group( "Movement" ), Range( 50f, 600f )]
+    public float WalkSpeed { get; set; } = 350f;
 
-    private CharacterController _controller;
-    private Vector3 _velocity;
+    [Property, Group( "Movement" ), Range( 400f, 700f )]
+    public float SprintSpeed { get; set; } = 550f;
+
+    [Property, Group( "Movement" ), Range( 250f, 500f )]
+    public float JumpImpulse { get; set; } = 380f;
+
+    private PlayerController _controller;
     private Vector3 _wishVelocity;
+    private bool _jumpPressed;
 
     protected override void OnStart()
     {
-        _controller = Components.Get<CharacterController>();
+        _controller = Components.Get<PlayerController>();
     }
 
     protected override void OnUpdate()
     {
         if ( IsProxy ) return;
+
         // Read input in OnUpdate — store intent for OnFixedUpdate
-        _wishVelocity = Input.AnalogMove * MoveSpeed;
+        var wishDir = Input.AnalogMove.Normal;
+        var speed = Input.Down( "Sprint" ) && _controller.IsOnGround
+            ? SprintSpeed
+            : WalkSpeed;
+
+        _wishVelocity = Transform.Rotation * new Vector3( wishDir.x, wishDir.y, 0f ) * speed;
+
         if ( Input.Pressed( "Jump" ) && _controller.IsOnGround )
         {
-            _velocity.z = JumpForce;
+            _jumpPressed = true;
         }
     }
 
     protected override void OnFixedUpdate()
     {
         if ( IsProxy ) return;
-        // Apply movement in OnFixedUpdate — use stored wish velocity, never read input here
-        _velocity.x = _wishVelocity.x;
-        _velocity.y = _wishVelocity.y;
-        _velocity.z -= Gravity * Time.Delta;
 
-        _controller.Move( _velocity * Time.Delta );
+        // Apply movement in OnFixedUpdate — never read Input.* here
+        _controller.WishVelocity = _wishVelocity;
+
+        if ( _jumpPressed )
+        {
+            _controller.Punch( Vector3.Up * JumpImpulse );
+            _controller.PreventGrounding();
+            _jumpPressed = false;
+        }
     }
 }
 ```
+
+### PlayerController — Key Properties
+
+| Property / Method | Type | Description |
+|---|---|---|
+| `WishVelocity` | `Vector3` | Set every `OnFixedUpdate` — the controller moves toward this velocity |
+| `IsOnGround` | `bool` | True when the controller is standing on a surface |
+| `PreventGrounding()` | method | Call after a jump/launch to stop the controller sticking to the ground |
+| `Punch( Vector3 )` | method | Apply an immediate velocity impulse (use for jump, knockback) |
+| `Velocity` | `Vector3` | Current velocity of the physics body |
+
+> **groundFriction** is a `[Property]` on `PlayerController` named `GroundFriction` — adjust in editor.
+
+---
 
 ### Scene.Trace — Physics Queries
 s&box uses `Scene.Trace` instead of Unity's `Physics.Raycast`:
@@ -111,7 +143,13 @@ public sealed class PhysicsObject : Component
     protected override void OnFixedUpdate()
     {
         if ( IsProxy ) return;
-        // _rb.ApplyForce( ... );
+        // Instantaneous velocity change — use for ragdoll launch, knockback:
+        // _rb.ApplyImpulse( impulse );
+        //
+        // Continuous force over time — use for sustained physics effects:
+        // _rb.ApplyForce( force );
+        //
+        // NEVER assign Rigidbody.Velocity directly — use ApplyImpulse() instead.
     }
 }
 ```
@@ -122,16 +160,19 @@ public sealed class PhysicsObject : Component
 2. **Input only in `OnUpdate()`** — read input, store intent, apply in `OnFixedUpdate()`
 3. **`IsProxy` guard** — physics should only run on the owning client
 4. **`Scene.Trace` not `Physics.Raycast`** — that is a Unity API
-5. **`CharacterController` for characters** — don't implement character physics from scratch with `Rigidbody`
-6. **No physics allocations** — pre-cache `CharacterController`/`Rigidbody` references in `OnStart()`
+5. **`PlayerController` for characters** — don't implement character physics from scratch with `Rigidbody`; do NOT use the old `CharacterController`
+6. **No physics allocations** — pre-cache `PlayerController`/`Rigidbody` references in `OnStart()`
+7. **`ApplyImpulse()` for velocity changes** — never assign `Rigidbody.Velocity` directly
 
 ## What This Agent Must NOT Do
 
 - Use `Physics.Raycast()`, `Physics.SphereCast()`, etc. — Unity APIs
 - Use `using UnityEngine;`
+- Use `CharacterController` — the old API; use `PlayerController` with `WishVelocity`
+- Use `_controller.Move(velocity * Time.Delta)` — old CharacterController pattern; set `WishVelocity` instead
+- Assign `Rigidbody.Velocity = x` — use `ApplyImpulse()` for instantaneous changes
 - Put physics/movement code in `OnUpdate()` — always `OnFixedUpdate()`
 - Skip `IsProxy` checks in movement Components
-- Implement custom character physics with raw `Rigidbody` when `CharacterController` is appropriate
 - Write code to `src/` — always `code/`
 
 ## Common Mistakes to Flag
@@ -140,15 +181,24 @@ public sealed class PhysicsObject : Component
 // VIOLATION: Unity Physics API
 Physics.Raycast(origin, direction);
 
+// VIOLATION: Old CharacterController API (breaking change)
+var _controller = Components.Get<CharacterController>();
+_controller.Move(_velocity * Time.Delta);  // CharacterController is gone
+
 // VIOLATION: Physics in OnUpdate
 protected override void OnUpdate() {
-    _controller.Move(velocity);  // Must be OnFixedUpdate
+    _controller.WishVelocity = wishDir * speed;  // Must be OnFixedUpdate
+}
+
+// VIOLATION: Direct Rigidbody.Velocity assignment (breaking change)
+protected override void OnFixedUpdate() {
+    _rb.Velocity = impulse;  // Use _rb.ApplyImpulse(impulse) instead
 }
 
 // VIOLATION: Missing IsProxy guard in multiplayer context
 protected override void OnFixedUpdate() {
     // IsProxy check missing — every client will run this
-    _controller.Move(velocity);
+    _controller.WishVelocity = wishDir * speed;
 }
 ```
 

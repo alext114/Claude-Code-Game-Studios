@@ -5,42 +5,49 @@
 
 ## Engine & Language
 
-- **Engine**: [TO BE CONFIGURED — run /setup-engine]
-- **Language**: [TO BE CONFIGURED]
-- **Rendering**: [TO BE CONFIGURED]
-- **Physics**: [TO BE CONFIGURED]
+- **Engine**: s&box (Facepunch, Source 2-based) — date-versioned (~26.04, April 2026)
+- **Language**: C# (.NET 10, Component system, hot-reload in editor)
+- **Rendering**: Source 2 (same renderer as CS2, Half-Life: Alyx)
+- **Physics**: Box3D (modified Rubikon, independent of Valve physics code)
+- **Build System**: s&box built-in (`.sbproj`), no standalone CLI compile step
+- **Asset Pipeline**: s&box scene/prefab JSON + model compiler
 
 ## Naming Conventions
 
-- **Classes**: [TO BE CONFIGURED]
-- **Variables**: [TO BE CONFIGURED]
-- **Signals/Events**: [TO BE CONFIGURED]
-- **Files**: [TO BE CONFIGURED]
-- **Scenes/Prefabs**: [TO BE CONFIGURED]
-- **Constants**: [TO BE CONFIGURED]
+- **Classes/Components**: PascalCase (e.g., `PlayerController`, `FrisbeePhysics`)
+- **Public [Property]**: PascalCase (e.g., `MoveSpeed`, `JumpForce`)
+- **Private fields**: _camelCase (e.g., `_velocity`, `_lastShoveTime`)
+- **Methods**: PascalCase (e.g., `OnUpdate()`, `TakeDamage()`, `StartRagdoll()`)
+- **Files**: PascalCase matching class (e.g., `PlayerController.cs`)
+- **Scenes/prefabs**: kebab-case filenames (e.g., `losmanos.scene`, `player.prefab`)
+- **Constants**: PascalCase or UPPER_SNAKE_CASE
 
 ## Performance Budgets
 
-- **Target Framerate**: [TO BE CONFIGURED]
-- **Frame Budget**: [TO BE CONFIGURED]
+- **Target Framerate**: 60fps (16.6ms frame budget)
+- **Tick Rate**: 50Hz (configured in `.sbproj` physics settings)
 - **Draw Calls**: [TO BE CONFIGURED]
 - **Memory Ceiling**: [TO BE CONFIGURED]
 
 ## Testing
 
-- **Framework**: [TO BE CONFIGURED]
-- **Minimum Coverage**: [TO BE CONFIGURED]
-- **Required Tests**: Balance formulas, gameplay systems, networking (if applicable)
+- **Framework**: None (no standard s&box test runner — manual in-editor playtesting)
+- **Minimum Coverage**: N/A
+- **Required Tests**: Playtest each system phase before moving to next (see GDD phases 1–5)
 
 ## Forbidden Patterns
 
-<!-- Add patterns that should never appear in this project's codebase -->
-- [None configured yet — add as architectural decisions are made]
+- `CharacterController` for player movement — use `PlayerController` + `WishVelocity`
+- Coroutines / `yield return` / `async` for gameplay timers — use `TimeSince` / `TimeUntil`
+- Re-adding global usings from `Global.cs` (`System`, `Sandbox`, `System.Linq`, etc.)
+- Single-line `if`/`else`/`for` bodies without `{ }` braces
+- Mutating `[Sync]` state from proxy Components — only owner/host mutates authoritative state
+- Polling `Time.Now` for cooldowns — use `TimeSince` / `TimeUntil` structs
 
 ## Allowed Libraries / Addons
 
-<!-- Add approved third-party dependencies here -->
-- [None configured yet — add as dependencies are approved]
+- s&box built-in APIs only (no NuGet packages for gameplay code)
+- `Json.Serialize` / `Json.Deserialize` for serialization (built-in, March 2026+)
 
 ## Architecture Decisions Log
 

@@ -1,6 +1,6 @@
 ---
 name: sbox-create-player-controller
-description: "Scaffold a complete s&box PlayerController Component with CharacterController movement, configurable [Property] values, input handling in OnUpdate, physics in OnFixedUpdate, and IsProxy guards for multiplayer. Writes to code/Components/PlayerController.cs."
+description: "Scaffold a complete s&box PlayerController Component using the PlayerController + WishVelocity API (NOT CharacterController), configurable [Property] values, input handling in OnUpdate, physics in OnFixedUpdate, and IsProxy guards for multiplayer. Writes to Code/Components/PlayerController.cs."
 argument-hint: "[no arguments — guided workflow]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, Edit, AskUserQuestion, TodoWrite
@@ -33,60 +33,57 @@ Ask these questions (can use AskUserQuestion for grouped answers):
 
 Draft the full PlayerController based on answers. Show the complete code before writing.
 
-**Template for standard multiplayer FPS controller:**
+> **IMPORTANT:** s&box uses `PlayerController` + `WishVelocity` — NOT the old `CharacterController` + `.Move()`.
+> `CharacterController` was removed in a breaking change. The built-in `PlayerController` component handles
+> gravity, ground friction, and stepping automatically. Set `WishVelocity` each `OnFixedUpdate`.
+
+**Template for standard multiplayer TPS controller (Los Manos style):**
 
 ```csharp
-using Sandbox;
-
 /// <summary>
-/// Handles player movement, jumping, and ground detection.
-/// Requires a CharacterController Component on the same GameObject.
+/// Handles player movement intent. Requires a PlayerController Component on the same GameObject.
+/// Input is read in OnUpdate; physics is applied in OnFixedUpdate via WishVelocity.
 /// All tuning values are exposed as [Property] for designer adjustment.
 /// </summary>
-[RequireComponent( typeof( CharacterController ) )]
-public sealed class PlayerController : Component
+[RequireComponent( typeof( PlayerController ) )]
+public sealed class PlayerMovement : Component
 {
-    [Property, Group( "Movement" ), Range( 50f, 600f )]
-    public float MoveSpeed { get; set; } = 250f;
+    [Property, Group( "Movement" ), Range( 200f, 500f )]
+    public float WalkSpeed { get; set; } = 350f;
 
-    [Property, Group( "Movement" ), Range( 100f, 800f )]
-    public float JumpForce { get; set; } = 350f;
+    [Property, Group( "Movement" ), Range( 400f, 700f )]
+    public float SprintSpeed { get; set; } = 550f;
 
-    [Property, Group( "Movement" ), Range( 5f, 60f )]
-    public float Gravity { get; set; } = 25f;
+    [Property, Group( "Movement" ), Range( 250f, 500f )]
+    public float JumpImpulse { get; set; } = 380f;
 
-    // [Only if camera handling requested]
-    [Property, Group( "Camera" ), Range( 0.1f, 10f )]
-    public float MouseSensitivity { get; set; } = 1f;
+    [Property, Group( "Movement" ), Range( 0f, 1f )]
+    public float AirControlFactor { get; set; } = 0.3f;
 
-    private CharacterController _controller;
-    private Vector3 _velocity;
+    private PlayerController _controller;
     private Vector3 _wishVelocity;
-    private Angles _eyeAngles;
+    private bool _jumpPressed;
 
     protected override void OnStart()
     {
-        _controller = Components.Get<CharacterController>();
+        _controller = Components.Get<PlayerController>();
     }
 
     protected override void OnUpdate()
     {
         if ( IsProxy ) return;
 
-        // Camera rotation (if camera handling enabled)
-        _eyeAngles.pitch += Input.MouseDelta.y * MouseSensitivity * -0.1f;
-        _eyeAngles.yaw += Input.MouseDelta.x * MouseSensitivity * 0.1f;
-        _eyeAngles.pitch = _eyeAngles.pitch.Clamp( -80f, 80f );
-        Transform.Rotation = Rotation.From( 0f, _eyeAngles.yaw, 0f );
-
-        // Capture move intent in OnUpdate — applied in OnFixedUpdate
+        // Read input in OnUpdate — store intent for OnFixedUpdate, never apply physics here
         var wishDir = Input.AnalogMove.Normal;
-        _wishVelocity = Transform.Rotation * new Vector3( wishDir.x, wishDir.y, 0f ) * MoveSpeed;
+        var isSprinting = Input.Down( "Sprint" ) && _controller.IsOnGround;
+        var speed = isSprinting ? SprintSpeed : WalkSpeed;
+        var controlFactor = _controller.IsOnGround ? 1f : AirControlFactor;
 
-        // Jump intent — captured here, applied in OnFixedUpdate
+        _wishVelocity = Transform.Rotation * new Vector3( wishDir.x, wishDir.y, 0f ) * speed * controlFactor;
+
         if ( Input.Pressed( "Jump" ) && _controller.IsOnGround )
         {
-            _velocity.z = JumpForce;
+            _jumpPressed = true;
         }
     }
 
@@ -94,21 +91,15 @@ public sealed class PlayerController : Component
     {
         if ( IsProxy ) return;
 
-        // Apply stored wish velocity — never read Input.* here
-        _velocity.x = _wishVelocity.x;
-        _velocity.y = _wishVelocity.y;
+        // Apply movement in OnFixedUpdate — never read Input.* here
+        _controller.WishVelocity = _wishVelocity;
 
-        // Gravity
-        if ( !_controller.IsOnGround )
+        if ( _jumpPressed )
         {
-            _velocity.z -= Gravity * Time.Delta;
+            _controller.Punch( Vector3.Up * JumpImpulse );
+            _controller.PreventGrounding();
+            _jumpPressed = false;
         }
-        else if ( _velocity.z < 0f )
-        {
-            _velocity.z = 0f;
-        }
-
-        _controller.Move( _velocity * Time.Delta );
     }
 }
 ```
@@ -119,10 +110,10 @@ Ask: "Does this match your design? Any values or features to adjust before I wri
 
 ## 4. Write the File
 
-After approval, write to `code/Components/PlayerController.cs`.
+After approval, write to `Code/Components/PlayerMovement.cs` (or a path under `Code/` appropriate to the project structure).
 
-If a CharacterController Component is needed, remind the user to add it to the player
-prefab in the s&box editor (it's a built-in Component, not a script file).
+Remind the user to add the built-in `PlayerController` Component to the player prefab in the s&box editor
+(it is a built-in engine Component, not a script file — you add it via the editor inspector).
 
 ---
 
@@ -142,8 +133,12 @@ Next steps:
 
 ## Guardrails
 
-- NEVER generate `CharacterController` via `new` — it must be a Component on the GameObject
+- NEVER use `CharacterController` — it is the old API, removed in a breaking change
+- NEVER call `_controller.Move(velocity * Time.Delta)` — that is the old CharacterController pattern
+- NEVER assign `Rigidbody.Velocity = x` — use `ApplyImpulse()` for instantaneous velocity changes
 - NEVER use `Physics.Raycast` for ground detection — use `_controller.IsOnGround`
 - NEVER skip `IsProxy` for a multiplayer game
-- Input reading always in `OnUpdate`, movement always in `OnFixedUpdate`
+- NEVER read `Input.*` in `OnFixedUpdate` — read input in `OnUpdate`, apply intent in `OnFixedUpdate`
+- Set `WishVelocity` each `OnFixedUpdate` — this is how `PlayerController` moves
+- Use `Punch( Vector3 )` + `PreventGrounding()` for jump impulses
 - If the user describes Unity-style movement code, explain s&box equivalents
