@@ -17,10 +17,10 @@ matching regeneration.
 | Path | Source | Status |
 |---|---|---|
 | `config.toml` | hand-maintained | ✅ |
-| `hooks.json` | `.claude/settings.json` | Phase 2 |
+| `hooks.json` | `.claude/settings.json` | ✅ |
 | `agents/*.toml` | `.claude/agents/*.md` | Phase 3 |
 | `skills/*/SKILL.md` | `.claude/skills/*/SKILL.md` | Phase 4 |
-| `../AGENTS.md` | `CLAUDE.md` + its `@imports` | Phase 1 |
+| `../AGENTS.md` | `CLAUDE.md` + its `@imports` | ✅ |
 
 See `docs/codex-port-plan.md`.
 

@@ -367,9 +367,22 @@ demoted. Surfaced R9.
 - Drop the `Notification` entry (`notify.sh`).
 - Point handlers at the existing `.claude/hooks/*.sh` — **no script changes.**
 
-**Acceptance:** `session-start.sh` and `detect-gaps.sh` fire on Codex session
-start with identical output to Claude Code; a deliberately bad commit message is
-blocked by `validate-commit.sh` with exit 2.
+**Acceptance (corrected):** the original criterion said "a deliberately bad
+commit message is blocked by `validate-commit.sh` with exit 2." That was wrong
+on both counts — `validate-commit.sh` does not inspect commit *messages*, and
+its message/style checks are advisory (warnings to stderr, `exit 0`). Its only
+blocking path is a staged invalid `assets/data/*.json`. Corrected criterion:
+every wired hook runs clean under Codex-shaped stdin, and `validate-commit.sh`
+exits 2 on staged invalid JSON.
+
+**Outcome:** all 11 wired hooks exercised with Codex-shaped stdin — all exit 0
+with output identical to Claude Code; `validate-commit.sh` returns exit 2 on
+staged invalid JSON and exit 0 on a non-commit command. 8 events emitted,
+`Notification` dropped. Matchers verified to port verbatim: `""` is match-all
+and `"Bash"` / `"Write|Edit"` are exact matchers in Codex too. The matcher is
+stripped on `Stop`, where Codex ignores it. Surfaced R10.
+
+Not verified: hooks firing inside a real Codex session (CLI not installed).
 
 ### Phase 3 — Agents *(2 days)*
 
@@ -429,6 +442,7 @@ as Claude Code; drift guard fails on a hand-edited `.codex/` file.
 | **R7** | Generator becomes stale / bypassed. | Medium | CI drift guard is the load-bearing control (§5). |
 | **R8** | Model slugs move. | Low | Do not hardcode. Pin against the Codex model picker at port time, in `mappings.toml` only. |
 | **R9** | **The source instruction chain declares three different engines.** `CLAUDE.md` says `[CHOOSE: Godot 4 / Unity / Unreal Engine 5]`, imports a pinned **Godot 4.6** version reference, and `technical-preferences.md` says **s&box / Source 2 / C#**. Pre-existing — Claude Code loads the same three via `@imports` — but flattening puts them ~70 lines apart in `AGENTS.md`, where the contradiction is unavoidable. | **High** | Not a port problem and not fixed here: the engine choice is a project decision. Resolve in `CLAUDE.md` + `technical-preferences.md`; `AGENTS.md` inherits the fix on the next sync. |
+| **R10** | **`validate-sbox.sh` is not wired into `settings.json`.** It is the most blocking-heavy hook in the repo — 4 `exit 2` paths enforcing s&box conventions (no `using UnityEngine`, no `MonoBehaviour` inheritance, no Unity `Physics.*` API, valid `.sbproj` JSON) — and it is registered nowhere, so it has never run. | Medium | Pre-existing and **not fixed by the port**: the generator reads `settings.json`, so the hook stays inert in Codex exactly as in Claude Code. Wiring it is a behaviour change (it blocks) and belongs in a separate decision, not a port commit. |
 
 ---
 
