@@ -19,6 +19,10 @@
 "WebSearch"       = "web_search"
 "WebFetch"        = "web_search"
 "SlashCommand"    = "skill"
+# Orchestration vocabulary. Codex's spawn_agent takes `agent_type`, a 1:1 with
+# Claude's `subagent_type` (multi_agents_spec.rs).
+"subagent_type"   = "agent_type"
+"via Task"        = "via spawn_agent"
 
 [tool_names_contextual]
 # UNSAFE to rewrite bare: these are ordinary English words. "Read the story

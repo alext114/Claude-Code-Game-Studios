@@ -434,6 +434,31 @@ Not verified: roles loading inside a real Codex session (CLI not installed).
 shows no surviving `/skill-name` or Claude tool names; the 9 `team-*` skills are
 individually reviewed by a human, not just generated.
 
+**Outcome:** 94 skills generated, frontmatter reduced to the two keys Codex
+reads, 0 problems. Across all 94 skills *and* all 57 agent roles there are now
+zero surviving `/skill-name` refs, `subagent_type`, `via Task`, `Task tool`,
+`AskUserQuestion`, `TodoWrite`, `WebSearch` or `WebFetch`. Injections landed
+exactly as scoped: 19 delegation notes, 9 orchestration notes, 8 effort hints,
+1 isolation note.
+
+**Bug found and fixed during this phase:** rewriting was applied to skill
+*bodies* but not to frontmatter `description`. Descriptions are what Codex
+matches on when selecting a skill, and they cross-reference other skills
+(`Run after /brainstorm`, `Distinct from /project-stage-detect`) and name Claude
+tools (`populates engine reference docs via WebSearch`). 12 skill refs and 1
+tool name were leaking through. Agent `description` had the same gap — it feeds
+`spawn_agent`'s `agent_type` guidance. Both now rewritten.
+
+**R1 is NOT fully discharged.** The plan called for hand-converting the 9
+`team-*` skills. What was actually done is systematic rather than bespoke: the
+orchestration vocabulary turned out to be highly regular (`subagent_type` maps
+1:1 onto Codex's `agent_type`, confirmed in `multi_agents_spec.rs`), so the
+renames are mechanical, and a single reviewed orchestration block covering the
+two real semantic gaps — no auto-routing, and the 6-thread concurrency cap — is
+injected into all 9. That is a sound default, not a substitute for reading
+them. Several `team-*` skills fan out to 7 roles, over the cap. **Each of the 9
+still needs a human pass before it is trusted.**
+
 ### Phase 5 — Validation *(1–2 days)*
 
 - Adapt `CCGS Skill Testing Framework` as the harness. Its specs are
@@ -464,6 +489,20 @@ as Claude Code; drift guard fails on a hand-edited `.codex/` file.
 | **R10** | **`validate-sbox.sh` is not wired into `settings.json`.** It is the most blocking-heavy hook in the repo — 4 `exit 2` paths enforcing s&box conventions (no `using UnityEngine`, no `MonoBehaviour` inheritance, no Unity `Physics.*` API, valid `.sbproj` JSON) — and it is registered nowhere, so it has never run. | Medium | Pre-existing and **not fixed by the port**: the generator reads `settings.json`, so the hook stays inert in Codex exactly as in Claude Code. Wiring it is a behaviour change (it blocks) and belongs in a separate decision, not a port commit. |
 
 ---
+
+### 6.7 `CLAUDE.md` references are deliberately not rewritten
+
+27 references to `CLAUDE.md` survive across 12 skills and 1 agent. This is
+intentional. A blanket rewrite to `AGENTS.md` would be actively wrong:
+`AGENTS.md` is a *generated* file, so a skill like `$setup-engine` — which
+*writes* the engine pin into `CLAUDE.md` — would be redirected into an artefact
+that the next sync overwrites.
+
+`CLAUDE.md` remains the source of truth under D3. Skills that read it still work
+in Codex (the file is present and readable); skills that write it are writing to
+the right place. A skill that edits `CLAUDE.md` leaves `AGENTS.md` stale, and
+the CI drift guard catches exactly that — the system working as designed, not a
+gap.
 
 ## 9. Non-goals and known losses
 

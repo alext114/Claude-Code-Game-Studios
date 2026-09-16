@@ -218,13 +218,13 @@ The s&box MCP server (`localhost:8098`) enables direct editor control from agent
 
 Use the spawn_agent tool to delegate to sub-specialists for deep implementation work:
 
-- `subagent_type: sbox-gameplay-programmer` — Component mechanics, game systems, lifecycle methods
-- `subagent_type: sbox-network-programmer` — all networking, `[Sync]`, `[Rpc.Broadcast]`, `[Rpc.Host]`, `[Rpc.Owner]`, `IsProxy`
-- `subagent_type: sbox-ui-programmer` — Razor panels, `.razor`, `.scss`, data binding
-- `subagent_type: sbox-physics-programmer` — `PlayerController`, rigidbody, scene traces
-- `subagent_type: sbox-mcp-specialist` — scene manipulation via MCP (create/modify/query GameObjects)
-- `subagent_type: sbox-level-builder` — CSG geometry, level layout, materials
-- `subagent_type: sbox-ai-programmer` — NavMesh, NavMeshAgent, behavior state machines
+- `agent_type: sbox-gameplay-programmer` — Component mechanics, game systems, lifecycle methods
+- `agent_type: sbox-network-programmer` — all networking, `[Sync]`, `[Rpc.Broadcast]`, `[Rpc.Host]`, `[Rpc.Owner]`, `IsProxy`
+- `agent_type: sbox-ui-programmer` — Razor panels, `.razor`, `.scss`, data binding
+- `agent_type: sbox-physics-programmer` — `PlayerController`, rigidbody, scene traces
+- `agent_type: sbox-mcp-specialist` — scene manipulation via MCP (create/modify/query GameObjects)
+- `agent_type: sbox-level-builder` — CSG geometry, level layout, materials
+- `agent_type: sbox-ai-programmer` — NavMesh, NavMeshAgent, behavior state machines
 
 Provide full context in the prompt: relevant file paths, design constraints, networking requirements, any entity GUIDs from prior MCP queries.
 

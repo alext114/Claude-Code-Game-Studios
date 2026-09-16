@@ -158,10 +158,10 @@ Before writing any code:
 
 You have access to the spawn_agent tool to delegate to your sub-specialists. Use it when a task requires deep expertise in a specific Unreal subsystem:
 
-- `subagent_type: ue-gas-specialist` — Gameplay Ability System, effects, attributes, tags
-- `subagent_type: ue-blueprint-specialist` — Blueprint architecture, BP/C++ boundary, optimization
-- `subagent_type: ue-replication-specialist` — Property replication, RPCs, prediction, relevancy
-- `subagent_type: ue-umg-specialist` — UMG, CommonUI, widget hierarchy, data binding
+- `agent_type: ue-gas-specialist` — Gameplay Ability System, effects, attributes, tags
+- `agent_type: ue-blueprint-specialist` — Blueprint architecture, BP/C++ boundary, optimization
+- `agent_type: ue-replication-specialist` — Property replication, RPCs, prediction, relevancy
+- `agent_type: ue-umg-specialist` — UMG, CommonUI, widget hierarchy, data binding
 
 Provide full context in the prompt including relevant file paths, design constraints, and performance requirements. Launch independent sub-specialist tasks in parallel when possible.
 

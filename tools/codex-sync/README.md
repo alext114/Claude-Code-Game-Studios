@@ -33,6 +33,10 @@ support from becoming double maintenance. All of it lives in `mappings.toml`.
   file" into "read_file the story file", so they are rewritten only inside
   backticks or in an explicit "X tool" phrasing.
 
+Rewrites apply to frontmatter `description` as well as bodies — descriptions
+are what Codex matches on when selecting a skill, and they cross-reference
+other skills by name.
+
 Skill references (`/x` → `$x`) are matched against the closed set of 94 real
 skill names with path-boundary guards, so `/help` is rewritten but `docs/help/`
 and `</div>` are not. Validated over all 151 source files: 991 rewrites, zero
@@ -40,5 +44,6 @@ false positives. `--self-test` covers the boundary cases.
 
 ## Status
 
-Phase 0 (scaffolding, mappings, shared rewriting) is implemented. Phases 1–4
-are explicit stubs. See `docs/codex-port-plan.md`.
+All phases (0–4) implemented: `AGENTS.md`, `.codex/hooks.json`,
+`.codex/agents/*.toml`, `.codex/hooks/deny-shell-for-roles.sh`, and
+`.codex/skills/*/SKILL.md` — 154 generated files. See `docs/codex-port-plan.md`.

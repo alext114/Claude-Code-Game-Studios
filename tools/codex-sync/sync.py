@@ -12,7 +12,7 @@ Phase status
     1  AGENTS.md                             done
     2  .codex/hooks.json                     done
     3  .codex/agents/*.toml                  done
-    4  .codex/skills/*/SKILL.md              stub
+    4  .codex/skills/*/SKILL.md              done
 
 Output must be deterministic: --check regenerates and byte-compares, so no
 timestamps or unordered iteration anywhere in generated content.
@@ -384,6 +384,9 @@ def generate_agents(mappings: dict) -> dict[Path, str]:
             # Codex skips a role with a blank description and only emits a
             # startup warning. Fail here rather than ship a missing role.
             raise RuntimeError(f"{where}: agent role requires a non-blank `description`")
+        # Role descriptions feed spawn_agent's agent_type guidance, so they need
+        # the same rewriting as the body.
+        description = rewrite_body(description, names, mappings)
 
         instructions = rewrite_body(body.strip(), names, mappings)
 
@@ -477,8 +480,113 @@ def generate_deny_shell_hook(mappings: dict) -> dict[Path, str]:
     return {CODEX / "hooks" / "deny-shell-for-roles.sh": script}
 
 
-def generate_skills(_m) -> dict[Path, str]:
-    raise NotImplementedError("Phase 4 — .codex/skills/ not yet implemented")
+ORCHESTRATION_NOTE = """## Orchestration (Codex)
+
+This skill delegates to specialist agent roles. Two things differ from Claude Code:
+
+- **Codex never auto-routes to a custom role.** Every delegation must be an
+  explicit `spawn_agent` call naming `agent_type`. Describing the work is not
+  enough; nothing is spawned unless you call the tool.
+- **Concurrency is capped** by `agents.max_concurrent_threads_per_session` in
+  `.codex/config.toml` (currently 6). Where a phase below lists more parallel
+  roles than that, spawn them in batches and collect each batch before starting
+  work that depends on it.
+
+Pass full context in each `message` — the agent does not inherit your reasoning,
+only what you send it.
+"""
+
+DELEGATION_NOTE = """## Delegation (Codex)
+
+Run this skill as the `{agent}` role: open with a `spawn_agent` call setting
+`agent_type: {agent}`, and pass the user's request through as the `message`.
+Codex does not route to a role on its own.
+"""
+
+
+def _skill_description(fm: dict, names: list[str], mappings: dict,
+                      where: str) -> str:
+    description = str(fm.get("description") or "").strip()
+    if not description:
+        raise RuntimeError(f"{where}: skill requires a non-blank `description`")
+    hint = str(fm.get("argument-hint") or "").strip()
+    if hint:
+        # Codex drops argument-hint. Fold it in so arguments stay discoverable.
+        joiner = "" if description.endswith((".", "!", "?")) else "."
+        description = f"{description}{joiner} Arguments: {hint}"
+    # Descriptions are what Codex matches on when selecting a skill, and they
+    # cross-reference other skills and name Claude tools. Rewrite them too.
+    return rewrite_body(description, names, mappings)
+
+
+def generate_skills(mappings: dict) -> dict[Path, str]:
+    import yaml
+
+    outputs: dict[Path, str] = {}
+    names = skill_names()
+
+    hints: dict[str, str] = {}
+    for level, spec in mappings["effort_hints"].items():
+        for skill in spec["skills"]:
+            hints[skill] = spec["text"]
+
+    for path in sorted(CLAUDE.glob("skills/*/SKILL.md")):
+        slug = path.parent.name
+        where = str(path.relative_to(REPO))
+        fm_text, body = split_frontmatter(path.read_text(encoding="utf-8"))
+        if not fm_text:
+            raise RuntimeError(f"{where}: no frontmatter")
+        fm = yaml.safe_load(fm_text) or {}
+
+        name = str(fm.get("name") or slug).strip()
+        if name != slug:
+            raise RuntimeError(f"{where}: frontmatter name {name!r} != directory {slug!r}")
+        description = _skill_description(fm, names, mappings, where)
+
+        body = rewrite_body(body.strip(), names, mappings)
+
+        prefix = []
+        # Codex has no `agent:` frontmatter and will not route on its own.
+        owner = fm.get("agent")
+        if owner:
+            prefix.append(DELEGATION_NOTE.format(agent=str(owner).strip()))
+        if slug.startswith("team-"):
+            prefix.append(ORCHESTRATION_NOTE)
+
+        suffix = []
+        # Codex skills cannot carry a model, so the tier becomes an instruction.
+        if slug in hints:
+            suffix.append("## Effort\n\n" + hints[slug])
+        # Codex has no worktree isolation.
+        if fm.get("isolation") == "worktree":
+            suffix.append(
+                "## Isolation\n\nThis skill produces throwaway work that must not land "
+                "on the working branch. Create a scratch git worktree before you begin "
+                "and do the work there."
+            )
+
+        front = yaml.safe_dump(
+            {"name": name, "description": description},
+            sort_keys=False, allow_unicode=True, width=10 ** 6,
+        ).strip()
+
+        parts = [
+            "---",
+            front,
+            "---",
+            "",
+            HEADER_MD.format(source=where),
+            "",
+        ]
+        parts.extend(block.strip() + "\n" for block in prefix)
+        parts.append(body)
+        for block in suffix:
+            parts.append("")
+            parts.append(block.strip())
+
+        outputs[CODEX / "skills" / slug / "SKILL.md"] = "\n".join(parts).rstrip("\n") + "\n"
+
+    return outputs
 
 
 IMPLEMENTED = {
@@ -486,8 +594,9 @@ IMPLEMENTED = {
     2: generate_hooks,
     3: generate_agents,
     31: generate_deny_shell_hook,
+    4: generate_skills,
 }
-PENDING = {4: generate_skills}
+PENDING: dict = {}
 
 
 # --------------------------------------------------------------------------

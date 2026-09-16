@@ -20,10 +20,16 @@ matching regeneration.
 | `hooks.json` | `.claude/settings.json` | ✅ |
 | `agents/*.toml` | `.claude/agents/*.md` | ✅ |
 | `hooks/deny-shell-for-roles.sh` | `disallowedTools` in `.claude/agents/*.md` | ✅ |
-| `skills/*/SKILL.md` | `.claude/skills/*/SKILL.md` | Phase 4 |
+| `skills/*/SKILL.md` | `.claude/skills/*/SKILL.md` | ✅ |
 | `../AGENTS.md` | `CLAUDE.md` + its `@imports` | ✅ |
 
 See `docs/codex-port-plan.md`.
+
+## Editing CLAUDE.md
+
+`CLAUDE.md` stays the source of truth; `AGENTS.md` is generated from it. If a
+skill or a human edits `CLAUDE.md`, `AGENTS.md` goes stale and the drift guard
+fails. Re-run the sync. That is the intended workflow, not a bug.
 
 ## First run
 
