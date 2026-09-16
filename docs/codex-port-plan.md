@@ -261,8 +261,14 @@ these roles need.
 `agent_type` field that Codex includes in hook stdin, exiting 2 to block.
 
 ```
-.codex/hooks.json → PreToolUse, matcher "Bash" → .claude/hooks/deny-shell-for-roles.sh
+.codex/hooks.json → PreToolUse, matcher "Bash" → .codex/hooks/deny-shell-for-roles.sh
 ```
+
+**Deviation from this plan, taken in Phase 3.** The script was originally
+specified at `.claude/hooks/deny-shell-for-roles.sh`. It is generated into
+`.codex/hooks/` instead: it is a generated artefact, and generated artefacts
+belong under `.codex/`, not in the hand-edited source tree. It is also
+Codex-only — Claude Code enforces this natively and does not want the hook.
 
 The hook reads `agent_type` from stdin, checks it against the 15-name list, and
 exits 2 with a reason. This reproduces the Claude Code behaviour faithfully and
@@ -395,6 +401,19 @@ Not verified: hooks firing inside a real Codex session (CLI not installed).
 **Acceptance:** all 57 roles load with zero startup warnings
 (`codex` prints agent-role warnings at startup — treat any as a failure);
 `spawn_agent` with `game-designer` cannot run a shell command.
+
+**Outcome:** 57 role files generated, all parse, zero schema problems, no keys
+outside the four Codex reads. Effort distribution matches the tier map exactly
+(3 high / 3 low / 51 medium). `model` left unset per open item #1 —
+`model_reasoning_effort` carries the substance of D2 and does not depend on a
+slug. Bodies are emitted as TOML *literal* strings (`'''`), which do no escape
+processing, so markdown survives verbatim; the generator asserts the two things
+a literal cannot hold. All 15 shell-denied roles carry the injected notice and
+no others do; 0 unrewritten skill references. The deny-shell hook was tested
+directly: exit 2 for `game-designer` and `writer`, exit 0 for
+`gameplay-programmer` and for the main thread (no `agent_type`).
+
+Not verified: roles loading inside a real Codex session (CLI not installed).
 
 ### Phase 4 — Skills *(3–4 days — the bulk)*
 

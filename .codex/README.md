@@ -18,7 +18,8 @@ matching regeneration.
 |---|---|---|
 | `config.toml` | hand-maintained | ✅ |
 | `hooks.json` | `.claude/settings.json` | ✅ |
-| `agents/*.toml` | `.claude/agents/*.md` | Phase 3 |
+| `agents/*.toml` | `.claude/agents/*.md` | ✅ |
+| `hooks/deny-shell-for-roles.sh` | `disallowedTools` in `.claude/agents/*.md` | ✅ |
 | `skills/*/SKILL.md` | `.claude/skills/*/SKILL.md` | Phase 4 |
 | `../AGENTS.md` | `CLAUDE.md` + its `@imports` | ✅ |
 
