@@ -55,7 +55,7 @@ Cross-reference density inside bodies (this is the rewrite surface):
 
 | Pattern | Files | Occurrences |
 |---|---:|---:|
-| `/skill-name` references | — | 1,076 |
+| `/skill-name` references | — | 991 |
 | `AskUserQuestion` | 78 | 265 |
 | `Task` | 75 | — |
 | `TodoWrite` | 35 | 35 |
@@ -208,7 +208,18 @@ than an error, so it will fail *silently*. The generator must assert on this.
 | `Read` | `read_file` / shell | |
 | `Bash` | `shell` | |
 | `Glob` / `Grep` | shell (`rg`, `find`) | 226 and 199 occurrences — mostly incidental prose |
-| `/skill-name` | `$skill-name` | 1,076 occurrences; safe because the 94-name list is closed |
+| `/skill-name` | `$skill-name` | 991 occurrences; safe because the 94-name list is closed |
+
+**Refined in Phase 0 — two rewrite classes, not one.** The table above is not
+safely applied uniformly. `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep` and
+`Task` are ordinary English words: rewriting them bare turns "Read the story
+file" into "read_file the story file". The generator therefore splits them:
+
+- **Safe** (`AskUserQuestion`, `TodoWrite`, `WebSearch`, `WebFetch`,
+  `SlashCommand`) — CamelCase, not English words. Rewritten anywhere.
+- **Contextual** (the rest) — rewritten **only** inside backticks (`` `Read` ``)
+  or in an explicit `"Read tool"` phrasing. Everything else is left for human
+  review.
 
 Three of these are **config-gated** and must be enabled in `.codex/config.toml`,
 or 78 skills will instruct the model to use a tool that does not exist:
@@ -373,6 +384,10 @@ blocked by `validate-commit.sh` with exit 2.
 - **Rewrite safety:** only rewrite `/` followed by an exact match from the
   94-name list, anchored on a non-path-character boundary. `/gate-check` must be
   rewritten; `src/gameplay/` must not.
+- **Validated in Phase 0.** Dry-run over all 151 source files: 991 rewrites,
+  0 path false positives, 0 missed skill names. A crude regex would have caught
+  85 extra tokens — `/summary`, `/root`, `/clear`, and `/div` (HTML closing
+  tags) — all correctly skipped by the closed-name matcher.
 - Inject delegation lines into the 19 skills with an `agent:` field.
 - Inject effort hints into the 8 skills from §6.5.
 - **Hand-convert the 9 `team-*` skills.** See risk R1.

@@ -1,0 +1,127 @@
+# codex-sync mapping table
+#
+# All Claude Code -> Codex divergences, in one place. Every entry here is a
+# closed, enumerable mapping — that is what makes the port scriptable rather
+# than editorial. See docs/codex-port-plan.md §6.
+
+# ---------------------------------------------------------------------------
+# §6.3 Tool vocabulary
+#
+# Applied to skill bodies and agent developer_instructions. Order matters:
+# longer names first so "Write/Edit" does not half-match.
+# ---------------------------------------------------------------------------
+
+[tool_names]
+# SAFE: CamelCase identifiers that are not English words. Rewritten wherever
+# they appear.
+"AskUserQuestion" = "request_user_input"
+"TodoWrite"       = "update_plan"
+"WebSearch"       = "web_search"
+"WebFetch"        = "web_search"
+"SlashCommand"    = "skill"
+
+[tool_names_contextual]
+# UNSAFE to rewrite bare: these are ordinary English words. "Read the story
+# file" must not become "read_file the story file". Rewritten ONLY inside
+# backticks (`Read`) or in an explicit "Read tool" phrasing.
+"Task"  = "spawn_agent"
+"Write" = "apply_patch"
+"Edit"  = "apply_patch"
+"Read"  = "read_file"
+"Bash"  = "shell"
+"Glob"  = "shell"
+"Grep"  = "shell"
+
+# Tools that must be enabled in .codex/config.toml [tools] for the rewritten
+# names to resolve. sync.py asserts these are present.
+[gated_tools]
+required = ["web_search", "update_plan", "experimental_request_user_input"]
+
+# ---------------------------------------------------------------------------
+# §6.5 Model tiers -> reasoning effort
+# ---------------------------------------------------------------------------
+
+[tiers]
+haiku  = "low"
+sonnet = "medium"
+opus   = "high"
+
+[agent_tiers]
+# Everything not listed defaults to the `sonnet` tier (medium).
+high = ["creative-director", "producer", "technical-director"]
+low  = ["community-manager", "devops-engineer", "sound-designer"]
+
+# ---------------------------------------------------------------------------
+# §6.5 Effort hints
+#
+# Codex skills cannot carry a model. Skills with an `agent:` field inherit
+# their tier from the owning role. These are the ones that do not, so the tier
+# is expressed as an instruction appended to the body instead.
+# ---------------------------------------------------------------------------
+
+[effort_hints.low]
+skills = ["changelog", "help", "onboard", "project-stage-detect",
+          "scope-check", "sprint-status", "story-readiness"]
+text = "This is a mechanical read-and-format task. Do not over-deliberate — prefer speed over exhaustiveness."
+
+[effort_hints.xhigh]
+skills = ["review-all-gdds"]
+text = "This is a high-stakes synthesis gate. Read every input in full and reason carefully across all of them before issuing a verdict."
+
+# ---------------------------------------------------------------------------
+# §6.4 Shell denial
+#
+# Design and narrative roles that may write files but must not run shell
+# commands. Codex sandbox_mode cannot express this (read-only would also block
+# apply_patch), so it is enforced by a PreToolUse hook keyed on agent_type.
+# Generated into .claude/hooks/deny-shell-for-roles.sh during Phase 3.
+# ---------------------------------------------------------------------------
+
+[shell_denied]
+agents = [
+  "art-director", "audio-director", "community-manager", "creative-director",
+  "economy-designer", "game-designer", "level-designer", "live-ops-designer",
+  "narrative-director", "sound-designer", "systems-designer",
+  "ue-blueprint-specialist", "ux-designer", "world-builder", "writer",
+]
+
+# ---------------------------------------------------------------------------
+# §6.1 / §6.2 Frontmatter keys Codex does not read
+# ---------------------------------------------------------------------------
+
+[frontmatter]
+# Dropped from generated SKILL.md. `argument-hint` is folded into description
+# rather than discarded, so arguments stay discoverable.
+skill_drop = ["user-invocable", "allowed-tools", "model", "agent", "context",
+              "isolation", "argument-hint"]
+skill_keep = ["name", "description"]
+
+# Agent keys with no Codex target.
+agent_drop = ["tools", "disallowedTools", "maxTurns", "memory", "skills",
+              "isolation"]
+
+# ---------------------------------------------------------------------------
+# §6.6 Hook events
+# ---------------------------------------------------------------------------
+
+[hooks]
+# Claude Code events with no Codex equivalent — dropped from hooks.json.
+drop_events = ["Notification"]
+
+# ---------------------------------------------------------------------------
+# Limits asserted by the generator
+# ---------------------------------------------------------------------------
+
+[limits]
+# DEFAULT_PROJECT_DOC_MAX_BYTES in codex-rs/config/src/config_toml.rs
+agents_md_max_bytes = 32768
+
+# ---------------------------------------------------------------------------
+# Model slugs — Phase 3, open item #1
+#
+# Deliberately empty. Pin against the installed Codex build's model picker.
+# Do not guess a slug from training data.
+# ---------------------------------------------------------------------------
+
+[models]
+default = ""

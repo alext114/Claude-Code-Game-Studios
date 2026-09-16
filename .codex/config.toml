@@ -1,0 +1,51 @@
+# Claude Code Game Studios — Codex CLI configuration
+#
+# HAND-MAINTAINED. This is the one file under .codex/ that is not generated.
+# Everything else here (skills/, agents/, hooks.json) and AGENTS.md at the repo
+# root is emitted by tools/codex-sync from .claude/ — do not hand-edit those.
+#
+# See docs/codex-port-plan.md.
+
+# ---------------------------------------------------------------------------
+# MCP servers — ported from .mcp.json
+# ---------------------------------------------------------------------------
+
+# NOTE: this path is an absolute Windows path from the original author's
+# machine and will not resolve for anyone else. It is ported verbatim to match
+# .mcp.json; both configs need the same fix. Tracked in docs/codex-port-plan.md.
+[mcp_servers.sbox-docs]
+command = "node"
+args = ['D:\source\repos\sbox-mcp-documentation\dist\index.js']
+
+[mcp_servers.codesight]
+command = "npx"
+args = ["codesight", "--mcp"]
+
+# ---------------------------------------------------------------------------
+# Subagents
+#
+# Codex does NOT auto-spawn custom roles — delegation must be explicit in the
+# prompt. Roles are generated into .codex/agents/*.toml during Phase 3.
+# ---------------------------------------------------------------------------
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 6
+
+# default_subagent_model / default_subagent_reasoning_effort are intentionally
+# unset until Phase 3. Pin them against the installed Codex build's model
+# picker — do not guess a slug. (Port plan open item #1.)
+
+# ---------------------------------------------------------------------------
+# Tools
+#
+# LOAD-BEARING. These three tools are config-gated in Codex. 78 generated
+# skills reference them by name (request_user_input, update_plan, web_search).
+# If this block is removed, those skills instruct the model to use tools that
+# do not exist, and the failure surfaces far from its cause.
+# ---------------------------------------------------------------------------
+
+[tools]
+web_search = true
+update_plan = { enabled = true }
+experimental_request_user_input = { enabled = true }
