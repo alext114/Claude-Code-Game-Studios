@@ -355,6 +355,12 @@ no config warnings.
 **Acceptance:** `AGENTS.md` byte-identical across two consecutive generator runs;
 Codex reports the project doc loaded.
 
+**Outcome:** 20,554 bytes — 63% of the limit, 12,214 bytes headroom. Idempotent
+(`--check` clean). All 6 imports resolved, 0 unrewritten skill references.
+Imported headings are demoted to nest under their section, and an imported
+title that merely restates the heading above it is dropped rather than
+demoted. Surfaced R9.
+
 ### Phase 2 — Hooks *(0.5 day)*
 
 - Generate `.codex/hooks.json` from the `hooks` block of `settings.json`.
@@ -422,6 +428,7 @@ as Claude Code; drift guard fails on a hand-edited `.codex/` file.
 | **R6** | Codex hook-trust prompt reads as a bug to new users. | Low | Document in README. |
 | **R7** | Generator becomes stale / bypassed. | Medium | CI drift guard is the load-bearing control (§5). |
 | **R8** | Model slugs move. | Low | Do not hardcode. Pin against the Codex model picker at port time, in `mappings.toml` only. |
+| **R9** | **The source instruction chain declares three different engines.** `CLAUDE.md` says `[CHOOSE: Godot 4 / Unity / Unreal Engine 5]`, imports a pinned **Godot 4.6** version reference, and `technical-preferences.md` says **s&box / Source 2 / C#**. Pre-existing — Claude Code loads the same three via `@imports` — but flattening puts them ~70 lines apart in `AGENTS.md`, where the contradiction is unavoidable. | **High** | Not a port problem and not fixed here: the engine choice is a project decision. Resolve in `CLAUDE.md` + `technical-preferences.md`; `AGENTS.md` inherits the fix on the next sync. |
 
 ---
 
